@@ -203,12 +203,15 @@ def finalize_package(output):
     for rel, expected in (manifest["inputs"] | manifest["outputs"]).items():
         if sha256(inside(output, rel)) != expected:
             raise ValueError("Bundle inputs or auxiliary files changed; rebuild")
-    from .delivery import code_identity
+    from .delivery import code_identity, skill_identity
+    current_skill_identity = skill_identity()
     for name, delivery in manifest["deliveries"].items():
         folder = inside(output, delivery["path"])
         child = read_json(folder / "manifest.json")
         if child.get("inputs", {}).get("audit/business-copyright.json") != manifest["input_sha256"]:
             raise ValueError("Child business input is not the package input")
+        if child.get("skill_identity") != current_skill_identity:
+            raise ValueError("Skill instructions changed since child review; rebuild before final package review")
         if (child["state"] != "reviewed" or child["build_id"] != delivery["build_id"]
                 or child["code_identity"] != code_identity()):
             raise ValueError("Every child must have a matching, current reviewed delivery")

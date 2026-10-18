@@ -13,6 +13,8 @@ RECORDS = {
 
 
 def scaffold(mode):
+    if mode in {"technical-report", "design-spec"}:
+        return {"task_requirements": [{"id": "T1", "text": "", "acceptance": "", "block_ids": []}]}
     if mode not in RECORDS:
         return {}
     key, fields = RECORDS[mode]

@@ -51,6 +51,11 @@ def validate(draft, case):
     schema = contract(draft.get("mode"))
     if draft.get("schema_version") != 1 or not isinstance(draft.get("title"), str) or not draft["title"].strip():
         issues.append(finding("DRAFT", "schema_version=1 and a nonempty title are required"))
+    missing = [name for name in ("source-index.json", "evidence.json") if not (case / name).is_file()]
+    if missing:
+        return {"schema_version": 1, "passed": False, "issues": [
+            finding("NO_SOURCES" if name == "source-index.json" else "NO_EVIDENCE",
+                    f"Missing {name}; run ingest first, then fill evidence.json after reading sources") for name in missing]}
     source_index = validate_source_index_v1(read_json(case / "source-index.json"))
     ledger = validate_evidence_v1(read_json(case / "evidence.json"))
     sources = {}
@@ -177,6 +182,8 @@ def validate(draft, case):
     # Load only technical checks; business adapters are orchestrated separately.
     from .technology import validate as validate_mode
     issues.extend(validate_mode(draft, ledger))
+    from .review import task_issues
+    issues.extend(task_issues(draft))
     return {"schema_version": 1, "passed": not any(i["severity"] == "error" for i in issues),
             "checks": "structure, source integrity, exact quotation, numeric coverage; semantic support requires review",
             "issues": issues}

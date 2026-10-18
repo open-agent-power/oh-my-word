@@ -226,6 +226,8 @@ def test_missing_title_detected(sample, tmp_path):
 @pytest.fixture
 def reviewable(sample, tmp_path, monkeypatch):
     # Unit fixture only: not evidence that the real PDF rendering path works.
+    sample[2]["task_requirements"] = [{"id": "T1", "text": "说明技术栈", "acceptance": "明确语言版本及依据", "block_ids": ["backgroundb"]}]
+    write_json(sample[3], sample[2])
     def fake_preview(docx, out, *args):
         (out / "preview.pdf").write_bytes(b"unit-preview")
         (out / "page-1.png").write_bytes(b"unit-page")
@@ -237,6 +239,10 @@ def reviewable(sample, tmp_path, monkeypatch):
     r = review_init(out)
     r.update(reviewer="unit fixture", reviewed_at="2026-10-15")
     r["content"] = {"status": "pass", "notes": "test fixture"}
+    for row in r["task_coverage"]:
+        row.update(status="covered", notes="Fixture task has language and evidence in backgroundb")
+    for row in r["semantic_support"]:
+        row.update(status="supported", notes="Fixture block exactly repeats source fact")
     r["pages"][0].update(status="pass", notes="test fixture")
     write_json(out / "audit/review.json", r)
     return out
@@ -273,3 +279,65 @@ def test_changed_generator_invalidates_review(reviewable, monkeypatch):
 
 def test_finalize_integrity_unit_fixture(reviewable):
     assert finalize(reviewable)["state"] == "reviewed"
+
+
+def test_legacy_draft_warns_and_missing_case_is_structured(sample, tmp_path):
+    assert "TASK_COVERAGE_MISSING" in codes(validate(sample[2], sample[1]))
+    result = validate(sample[2], tmp_path / "empty")
+    assert not result["passed"]
+    assert {"NO_SOURCES", "NO_EVIDENCE"} <= codes(result)
+    out = tmp_path / "blocked"
+    assert build(sample[3], tmp_path / "empty", out, no_preview=True)["state"] == "blocked"
+    assert not (out / "output.docx").exists()
+
+
+@pytest.mark.parametrize("mutation", [
+    lambda d: d.update(task_requirements=None),
+    lambda d: d.update(task_requirements=[]),
+    lambda d: d.update(task_requirements=[{"id": "T1", "text": "任务", "acceptance": "明确依据", "block_ids": ["absent"]}]),
+    lambda d: d.update(task_requirements=[{"id": "T1", "text": "任务", "block_ids": ["backgroundb"]}]),
+])
+def test_task_contract_rejects_untraced_or_incomplete_items(sample, mutation):
+    mutation(sample[2])
+    assert not validate(sample[2], sample[1])["passed"]
+
+
+@pytest.mark.parametrize("field,status", [("task_coverage", "gap"), ("task_coverage", "partial"), ("semantic_support", "unsupported")])
+def test_unresolved_content_cannot_finalize(reviewable, field, status):
+    report = read_json(reviewable / "audit/review.json")
+    report[field][0].update(status=status, notes="Concrete unresolved observation")
+    write_json(reviewable / "audit/review.json", report)
+    with pytest.raises(ValueError, match=field):
+        finalize(reviewable)
+
+
+def test_review_does_not_auto_approve_undetected_semantics(sample, tmp_path):
+    from word_skills.review import review_rows, validate_review
+    sample[2]["task_requirements"] = [{"id": "T1", "text": "说明技术栈", "acceptance": "引用实际来源", "block_ids": ["backgroundb"]}]
+    sample[2]["sections"][0]["blocks"][0]["text"] += "系统性能大幅提升。"
+    # Public numeric checks cannot decide entailment. Review remains pending.
+    assert validate(sample[2], sample[1])["passed"]
+    report = review_rows(sample[2])
+    assert all(r["status"] == "pending" for rows in report.values() for r in rows)
+    with pytest.raises(ValueError, match="task_coverage"):
+        validate_review(sample[2], report)
+    report["task_coverage"][0].update(status="covered", notes="Technical stack identified")
+    for row in report["semantic_support"]:
+        row.update(status="supported", notes="Fixture exact fact")
+    report["semantic_support"][0].update(status="unsupported", notes="Source contains language version, no performance result")
+    with pytest.raises(ValueError, match="semantic_support"):
+        validate_review(sample[2], report)
+
+
+def test_duplicate_semantic_review_cannot_hide_unreviewed_blocks(reviewable):
+    report = read_json(reviewable / "audit/review.json")
+    report["semantic_support"][-1] = report["semantic_support"][0].copy()
+    write_json(reviewable / "audit/review.json", report)
+    with pytest.raises(ValueError, match="semantic_support"):
+        finalize(reviewable)
+
+
+def test_skill_changes_invalidate_review(reviewable, monkeypatch):
+    monkeypatch.setattr("word_skills.delivery.skill_identity", lambda: "changed")
+    with pytest.raises(ValueError, match="Skill instructions"):
+        finalize(reviewable)

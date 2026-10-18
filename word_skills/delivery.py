@@ -9,6 +9,7 @@ from .common import digest, finding, inside, now, read_json, sha256, write_json
 from .evidence import contract, validate
 from .inspect import inspect_docx, inspect_pdf, preview
 from .render import fingerprint, render
+from .review import review_rows, validate_review
 
 
 def code_identity():
@@ -26,6 +27,12 @@ def versions():
     return result
 
 
+def skill_identity():
+    root = Path(__file__).resolve().parents[1]
+    paths = [p for folder in ("skills", "shared", "registry") for p in (root / folder).rglob("*") if p.is_file()]
+    return digest({p.relative_to(root).as_posix(): sha256(p) for p in sorted(paths)}) if paths else None
+
+
 def build(draft_path, case, output, template=None, template_mode="style", soffice=None, pdftoppm=None, no_preview=False, *, business_gate=None):
     output, case, draft_path = Path(output).resolve(), Path(case).resolve(), Path(draft_path).resolve()
     draft = read_json(draft_path)
@@ -40,7 +47,7 @@ def build(draft_path, case, output, template=None, template_mode="style", soffic
     validation = validate(draft, case)
     write_json(audit / "validation.json", validation)
     manifest = {"schema_version": 1, "created_at": now(), "state": "blocked", "mode": draft["mode"],
-                "code_identity": code_identity(), "versions": versions(), "template_mode": template_mode if template else None,
+                "code_identity": code_identity(), "skill_identity": skill_identity(), "versions": versions(), "template_mode": template_mode if template else None,
                 "business_gate": required_gate, "inputs": {}, "outputs": {}, "review": "not performed"}
     for key in ("case_id", "document_id"):
         if key in draft:
@@ -48,8 +55,9 @@ def build(draft_path, case, output, template=None, template_mode="style", soffic
     # Keep an auditable, portable snapshot; never mutate the input case or draft.
     shutil.copyfile(draft_path, audit / "draft.json")
     for name in ("source-index.json", "evidence.json"):
-        shutil.copyfile(case / name, audit / name)
-    for source in read_json(case / "source-index.json")["sources"]:
+        if (case / name).is_file():
+            shutil.copyfile(case / name, audit / name)
+    for source in (read_json(case / "source-index.json")["sources"] if (case / "source-index.json").is_file() else []):
         for key in ("snapshot", "extracted", "segments"):
             dest = inside(audit, source[key])
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -102,7 +110,7 @@ def build(draft_path, case, output, template=None, template_mode="style", soffic
         rel = p.relative_to(output).as_posix()
         if p.is_file() and rel not in manifest["inputs"] and rel != "manifest.json":
             manifest["outputs"][rel] = sha256(p)
-    manifest["build_id"] = digest({"inputs": manifest["inputs"], "outputs": manifest["outputs"], "code": manifest["code_identity"]})
+    manifest["build_id"] = digest({"inputs": manifest["inputs"], "outputs": manifest["outputs"], "code": manifest["code_identity"], "skills": manifest["skill_identity"]})
     write_json(output / "manifest.json", manifest)
     return manifest
 
@@ -119,6 +127,7 @@ def review_init(output):
               "content": {"status": "pending", "notes": ""},
               "pages": [{"image": name, "status": "pending", "notes": ""} for name in manifest["renderer"]["page_images"]],
               "accepted_warnings": [], "findings": []}
+    report.update(review_rows(read_json(output / "audit/draft.json")))
     write_json(target, report)
     return report
 
@@ -137,6 +146,8 @@ def finalize(output):
             raise ValueError("Business validation did not pass")
     if manifest["code_identity"] != code_identity():
         raise ValueError("Generator changed since build; rebuild before final review")
+    if manifest.get("skill_identity") != skill_identity():
+        raise ValueError("Skill instructions changed since build; rebuild before final review")
     for rel, checksum in (manifest["inputs"] | manifest["outputs"]).items():
         path = inside(output, rel)
         if not path.is_file() or sha256(path) != checksum:
@@ -148,6 +159,7 @@ def finalize(output):
         raise ValueError("Review identity, reviewer and timestamp required")
     if report.get("content", {}).get("status") != "pass" or not report["content"].get("notes"):
         raise ValueError("Content review with concrete notes required")
+    validate_review(read_json(output / "audit/draft.json"), report)
     expected = manifest.get("renderer", {}).get("page_images", [])
     reviewed = report.get("pages", [])
     if not expected or len(reviewed) != len(expected) or {p.get("image") for p in reviewed} != set(expected):

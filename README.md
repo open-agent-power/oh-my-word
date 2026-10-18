@@ -51,6 +51,8 @@ python -m word_skills finalize delivery
 
 `reviewed` 只表示已记录的内容和版面复核，不表示事实真实性、正式提交、受理或授权。模板支持范围、证据契约和交付状态见 `skills/word-document/references/`。
 
+技术报告、设计说明的新稿需填写 `task_requirements`（用户任务、验收条件和正文块映射）；旧稿仍可构建草稿，补齐后才能定稿。审阅时逐项填写 `task_coverage`、逐事实块填写 `semantic_support`，总体内容和全部页图仍需实际核对。此记录证明已记载的审阅，不是自动语义认证。
+
 ## 项目申报与软著准备
 
 软著直接复用 Fokkyp 2.6 的分析、业务理解、源码候选、申请字段与手册流程，继续使用共享 Word 后端；手册保留章节、表格、命令和真实图片：

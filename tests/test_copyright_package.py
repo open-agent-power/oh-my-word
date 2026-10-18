@@ -96,6 +96,41 @@ def test_source_preview_cannot_enter_review(case, tmp_path):
         review_init(out)
 
 
+def test_finalize_package_rejects_stale_skill_identity(tmp_path, monkeypatch):
+    from word_skills import delivery
+    from word_skills.common import sha256
+
+    out = tmp_path / "bundle"
+    child_folder = out / "source"
+    audit = child_folder / "audit"
+    audit.mkdir(parents=True)
+    business = audit / "business-copyright.json"
+    business.write_text("{}", encoding="utf-8")
+    review = audit / "review.json"
+    write_json(review, {"reviewer": "test reviewer"})
+    write_json(child_folder / "manifest.json", {
+        "state": "reviewed",
+        "build_id": "build-1",
+        "code_identity": delivery.code_identity(),
+        "skill_identity": "skill-fingerprint-at-review",
+        "inputs": {"audit/business-copyright.json": sha256(business)},
+        "outputs": {},
+        "review": {"path": "audit/review.json", "sha256": sha256(review)},
+    })
+    write_json(out / "manifest.json", {
+        "purpose": "registration",
+        "state": "awaiting-review",
+        "input_sha256": sha256(business),
+        "inputs": {},
+        "outputs": {},
+        "deliveries": {"source": {"path": "source", "build_id": "build-1"}},
+    })
+    monkeypatch.setattr(delivery, "skill_identity", lambda: "current-skill-fingerprint")
+
+    with pytest.raises(ValueError, match="Skill instructions changed"):
+        finalize_package(out)
+
+
 def test_manual_change_after_validation_cannot_be_transcribed(case, tmp_path, monkeypatch):
     path, _ = case
     original = copyright.validate_copyright
