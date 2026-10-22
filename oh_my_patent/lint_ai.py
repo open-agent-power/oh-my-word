@@ -108,6 +108,7 @@ _DIRECT_NEGATION = re.compile(
 _SCOPE_NEGATION = re.compile(r"不涉及|未涉及|没有涉及|不包含|不假设")
 _CLAUSE_BOUNDARY = re.compile(
     r"[，,。；;！？!?\n]|但是|然而|而是|但|而|却|仍然|仍需|同时|随后|然后|即可|"
+    r"并且|而且|且|也(?=会|可|需|能|将)|还(?=会|可|需|能|将)|"
     r"并(?=训练|构建|采用|调用|使用)"
 )
 

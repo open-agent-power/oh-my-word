@@ -106,9 +106,18 @@ class AiDisclosureTest(unittest.TestCase):
             "无需人工标注即可训练神经网络。",
             "不仅训练神经网络，还构建预测模型。",
             "本方案不涉及传统模型。训练神经网络进行分类。",
+            "本方案不涉及模型训练且会构建神经网络用于分类。",
+            "不涉及模型训练且训练神经网络进行分类。",
+            "不涉及模型训练并且会训练神经网络进行分类。",
+            "不涉及模型训练而且构建神经网络进行分类。",
+            "不涉及模型训练也可以构建神经网络进行分类。",
+            "不涉及模型训练还需要训练神经网络进行分类。",
         ):
             with self.subTest(text=text):
                 self.assertIn("AI-002", codes(base(text), "AI-"))
+
+    def test_coordinated_negative_clauses_remain_negative(self):
+        self.assertEqual(codes(base("不涉及训练模型且不采用神经网络，只按规则处理字符串。"), "AI-"), set())
 
     def test_negated_description_does_not_support_ai_claim(self):
         draft = base("本方案不涉及神经网络。")
