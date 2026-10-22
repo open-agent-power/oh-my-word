@@ -1,5 +1,6 @@
 """PDF extraction and isolated preview invariants; no real Office claim in mocks."""
 from pathlib import Path
+from subprocess import TimeoutExpired
 from types import SimpleNamespace
 
 import pytest
@@ -7,7 +8,7 @@ from pypdf import PdfWriter
 from pypdf.generic import DictionaryObject, NameObject, DecodedStreamObject
 
 from word_skills.common import sha256
-from word_skills.inspect import inspect_pdf, preview
+from word_skills.inspect import _libreoffice_version, inspect_pdf, preview
 
 
 def test_pdf_content_omission_is_detected(tmp_path):
@@ -114,3 +115,37 @@ def test_preview_rasterizes_in_isolated_directory_and_records_provenance(tmp_pat
     assert result["provenance"]["page_hashes"] == {"page-1.png": sha256(out / "page-1.png")}
     assert result["provenance"]["docx_sha256"] == sha256(source)
     assert not Path(calls[0][calls[0].index("--outdir") + 1]).exists()
+
+
+@pytest.mark.parametrize("console", [False, True])
+def test_windows_version_query_isolated_and_keeps_selected_installation(tmp_path, monkeypatch, console):
+    executable = tmp_path / "soffice.exe"
+    executable.touch()
+    if console:
+        executable.with_suffix(".com").touch()
+    monkeypatch.setattr("word_skills.inspect.sys.platform", "win32")
+    calls = []
+
+    def run(args, **kwargs):
+        calls.append(args)
+        assert args[0] == str(executable.with_suffix(".com") if console else executable)
+        assert args[-2:] == ["--headless", "--version"]
+        assert args[1].startswith("-env:UserInstallation=file:///")
+        return SimpleNamespace(returncode=0, stdout="LibreOffice test\n")
+
+    monkeypatch.setattr("word_skills.inspect.subprocess.run", run)
+    assert _libreoffice_version(executable) == "LibreOffice test"
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("failure", ["exit", "timeout", "missing"])
+def test_version_failure_is_nonfatal_and_does_not_use_failed_stdout(tmp_path, monkeypatch, failure):
+    def run(args, **kwargs):
+        if failure == "timeout":
+            raise TimeoutExpired(args, kwargs["timeout"])
+        if failure == "missing":
+            raise FileNotFoundError(args[0])
+        return SimpleNamespace(returncode=1, stdout="not a successful version")
+
+    monkeypatch.setattr("word_skills.inspect.subprocess.run", run)
+    assert _libreoffice_version(tmp_path / "soffice") is None

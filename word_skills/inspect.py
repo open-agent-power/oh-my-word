@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from collections import Counter
 from pathlib import Path
@@ -51,6 +52,21 @@ def inspect_docx(path, draft):
     return issues
 
 
+def _libreoffice_version(executable):
+    """Query the selected installation without using an interactive Office profile."""
+    executable = Path(executable).resolve()
+    if sys.platform == "win32" and executable.name.lower() == "soffice.exe" and executable.with_suffix(".com").is_file():
+        executable = executable.with_suffix(".com")
+    try:
+        with tempfile.TemporaryDirectory(prefix="word-skills-version-") as temp:
+            result = subprocess.run([str(executable), "-env:UserInstallation=" + Path(temp).as_uri(),
+                                     "--headless", "--version"], capture_output=True, text=True,
+                                    encoding="utf-8", errors="replace", timeout=10)
+        return (result.stdout.strip() or None) if result.returncode == 0 else None
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+
 def preview(docx, folder, soffice=None, pdftoppm=None):
     """Run only supplied/local executables; no download or cloud fallback."""
     soffice = soffice or shutil.which("soffice") or shutil.which("soffice.exe")
@@ -82,10 +98,7 @@ def preview(docx, folder, soffice=None, pdftoppm=None):
         for image in images:
             shutil.copyfile(image, folder / image.name)
         page_names = [p.name for p in images]
-    try:
-        version = subprocess.run([str(soffice), "--version"], capture_output=True, text=True, timeout=20).stdout.strip() or None
-    except (OSError, subprocess.TimeoutExpired):
-        version = None
+    version = _libreoffice_version(soffice)
     return {"backend": "LibreOffice", "version": version, "pages": count, "page_images": page_names,
             "provenance": {"docx_sha256": sha256(docx), "pdf_sha256": sha256(destination),
                            "conversion_command": command, "raster_command": raster_command, "dpi": 110,

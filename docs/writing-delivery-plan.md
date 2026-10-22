@@ -158,3 +158,5 @@ AI公开检查现对明确排除范围与紧邻模型术语的否定表达做词
 三份纠错后的公开样稿均经现有后端生成Word、LibreOffice PDF/页图，并使用本机WPS以只读方式打开、导出PDF和页图。两引擎各3页均已实际看图，未见遮挡、溢出或缺字。LibreOffice为26.8.1.1；WPS安装目录版本12.1.0.29161、COM报告12.0。Word未安装，其他版本与复杂客户模板没有验证。机器检查均为0项DOCX结构问题，不代表语义或法律有效性。
 
 另复跑gin-table、flask-inline、express-table三个既有排版案例，各4页；12张LibreOffice页图全部看过，正文和表格单元格内容/顺序保持，普通跨页表格表头重复、未见行被裁断。短尾页留白和表格内字面Markdown仍存在；页高以上的超高行及复杂模板不在此次样本覆盖内。这是明确范围的排版回归，不是所有客户端兼容认证。外部证据在 `../word-skills-reuse-trial/maintenance-20261022/` 的 `environment-fixed.json`、`reviewed-documents/`、`layout-regression/` 和 `visual-review.json`。
+
+生产preview也存在同一GUI版本查询超时，已单轮修正为同安装目录控制台入口及临时独立headless profile；不改转换和栅格化行为。11项preview回归通过，包括失败版本查询不影响已完成预览、不把失败stdout当版本、没有控制台入口时不换安装路径。一次真实生产preview生成1页并取得26.8.1.1版本，总耗时27.810秒，页图已看过；此时间包含转换，不能等同版本查询耗时。记录见 `preview-version-verification.json`。仅清理本任务明确创建且遗留的3个旧版本查询进程，没有停止已有Office会话。
