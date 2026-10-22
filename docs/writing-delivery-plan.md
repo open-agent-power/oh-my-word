@@ -138,3 +138,13 @@ AI公开检查现对明确排除范围与紧邻模型术语的否定表达做词
 软著字段适配现在保留真实主要功能原文，禁用自动凑字的通用功能回填。覆盖短文、缺失、answers覆盖及超长原文的实际子进程测试，32项流程/打包测试通过，固定vendor原件未改。500字限制经调研保留为上游兼容规则；近期转载描述了同类下限，但官方页面访问受限，未取得当期在线表单，不宣称已经核实官方适用性。
 
 `regex-pattern` 属于公开示例 python-slugify 8.0.4 而非word-skills。最小补丁位于 `evals/reuse/patches/`，只应用到仓库外新副本；5项真实CLI/API调用确认原版未转发、补丁后生效且默认行为不变。原固定材料及历史验收身份未改，没有向上游发送消息。实际副本和记录在 `../word-skills-reuse-trial/maintenance-20261022/`。
+
+## 新材料对照与评测修复（2026-10-23）
+
+复用现有runner，新增软著操作说明与专利交底提纲两种任务及对应材料包选择。选择CPython 3.12.14的shorten、urljoin、ip_network三组公开源码节选，保留完整模块哈希、节选行号、PSF许可及11项真实输入输出；不称训练数据未见或专业盲测。每种材料plain/current各一次，共6次；输入材料一致，仅current添加相关Skill。请求模型固定gpt-6-luna，但trace未暴露实际解析模型，实际身份保持unknown。
+
+原始对照plain结构有效3/3、current为2/3；5份结构有效输出均有非逐字引文，current另有1份无效JSON，失败保留。plain累计95.593秒/54326输入token，current累计181.766秒/70299输入token，包含失败调用；单次小样及缓存差异不能证明质量优劣，但不支持无代价收益。费用不可得。来源真实而解释仍可能错误：模型将TextWrapper通用长词分支泛化到固定max_lines=1的shorten入口，说明下层代码引文不能代替调用条件核对。
+
+根据实际失败启用现有CLI的output-schema，并将Schema与材料共同冻结；另记录exact quote审计，仅查登记原文和逐字连续引文，不判断语义。新增回归特意给出真实引文/相反结论，结果仍明确semantic_support=not_automatically_evaluated。generation_countable只表示结构生成有效，不是内容通过。修复验证另建current单条件3次记录，未覆盖或并入原A/B：3/3结构有效，18/18引文逐字匹配。一次只读Agent复核仍提出shorten默认值/入口范围和network异常表述边界，主线程在独立修订副本中改正；模型原输出保持不动，没有专业审核或质量提升认证。
+
+14项离线runner测试及2个子测试通过。旧formal测试依赖本机历史目录及旧runner哈希，已改为临时合成fixture；没有改旧实验的固定输入或降低过期校验。全部原始输出、用量、对照审计、补充运行与修订位于 `../word-skills-reuse-trial/maintenance-20261022/domain-cases/`，结果见 `results.json`。公开代码练习仍不足以证明真实专利质量或替代专业审查。

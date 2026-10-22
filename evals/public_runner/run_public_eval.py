@@ -25,6 +25,7 @@ DEFAULT_RUNS = Path(r"D:\XiangMuLuoDi\Development\word-skills-public-eval\runs")
 TASK_KEYS = {"id", "kind", "split", "request", "materials", "metadata"}
 MATERIAL_KEYS = {"path", "sha256", "source_id"}
 COMMON = """Use the complete supplied source text as context. Ground factual claims in the source materials, distinguish evidence from inference, and state material gaps. Do not claim verification or review that you did not perform. Return one valid JSON object using a renderer-neutral structure. For factual-qa, include answer (string), evidence (array of objects with claim, material_path, and quote strings), and limitations (array of strings). For writing, include draft with title and sections (array); each section has title and blocks. A paragraph block has type=paragraph and text. A table block has type=table, headers (array of strings), and rows (array of string arrays). Also include evidence (array of objects with claim, material_path, and quote strings) and limitations (array of strings). For general factual QA, answer directly; do not create a technical report. For writing tasks, follow the requested document purpose and audience. Do not invent project-specific measurements or conclusions. Additional Skill-specific fields or constraints may be included when needed, but keep the result editable and renderer-neutral."""
+COMMON += " Each evidence quote must be one exact contiguous substring of its material, preserving whitespace; do not paraphrase or join excerpts with ellipses. Use an empty quote only when no supporting passage exists."
 
 
 def now() -> str:
@@ -58,7 +59,7 @@ def read_tasks(path: Path) -> list[dict]:
         if not isinstance(task_id, str) or not task_id.replace("-", "").replace("_", "").isalnum() or task_id in ids:
             raise ValueError("Task ids must be unique and path-safe")
         ids.add(task_id)
-        if task.get("kind") not in {"factual-qa", "technical-report", "design-spec"}:
+        if task.get("kind") not in {"factual-qa", "technical-report", "design-spec", "copyright-manual", "patent-outline"}:
             raise ValueError(f"Unsupported task kind: {task_id}")
         if not isinstance(task.get("split"), str) or not isinstance(task.get("request"), str) or not task["request"].strip():
             raise ValueError(f"Missing split or request: {task_id}")
@@ -91,6 +92,14 @@ def relevant_bundle(task: dict) -> list[Path]:
             REPO / "shared/references/chinese-writing.md",
             REPO / f"word_skills/schemas/{schema}.yaml",
         ]
+    elif task["kind"] == "copyright-manual":
+        paths += [REPO / "skills/oh-my-copyright/SKILL.md",
+                  REPO / "skills/oh-my-copyright/references/manual-and-visuals.md"]
+    elif task["kind"] == "patent-outline":
+        paths += [REPO / "skills/oh-my-patent/SKILL.md",
+                  REPO / "skills/oh-my-patent/references/claim-support-contract.md",
+                  REPO / "skills/oh-my-patent/references/evidence-contract.md",
+                  REPO / "skills/oh-my-patent/domains/patent-software-ai/SKILL.md"]
     paths = sorted(set(paths))
     missing = [str(p) for p in paths if not p.is_file()]
     if missing:
@@ -141,6 +150,7 @@ def prepare(args: argparse.Namespace) -> Path:
     if root.exists():
         raise FileExistsError(root)
     root.mkdir(parents=True)
+    conditions = tuple(getattr(args, "conditions", None) or CONDITIONS)
     frozen_tasks = []
     runner_path = Path(__file__).resolve()
     runner_hash = sha(runner_path)
@@ -159,7 +169,7 @@ def prepare(args: argparse.Namespace) -> Path:
             if actual.lower() != mat["sha256"].lower():
                 raise ValueError(f"SHA256 mismatch: {task['id']}:{mat['path']}")
             safe_task["materials"].append({"path": rel.as_posix(), "source_id": mat["source_id"], "sha256": actual})
-        for condition in CONDITIONS:
+        for condition in conditions:
             case = root / "frozen" / task["id"] / condition
             case.mkdir(parents=True)
             material_manifest = {}
@@ -187,20 +197,23 @@ def prepare(args: argparse.Namespace) -> Path:
             prompt = prompt_for(task, condition, embedded_sources(case, task, condition))
             prompt_path = case / "prompt.txt"
             prompt_path.write_text(prompt, encoding="utf-8")
+            schema_source = REPO / "evals/public_runner" / ("schema_qa.json" if task["kind"] == "factual-qa" else "schema_writing.json")
+            shutil.copyfile(schema_source, case / "response-schema.json")
             dump(case / "workspace-manifest.json", {"materials": material_manifest, "bundle": bundle_manifest,
+                                                       "response_schema": {"response-schema.json": sha(case / "response-schema.json")},
                                                        "prompt_sha256": sha(prompt_path)})
         frozen_tasks.append(safe_task)
     task_file = root / "tasks.jsonl"
     task_file.write_text("".join(json.dumps(t, ensure_ascii=False) + "\n" for t in frozen_tasks), encoding="utf-8")
     frozen_hashes = {p.relative_to(root).as_posix(): sha(p) for p in sorted((root / "frozen").rglob("*")) if p.is_file()}
     dump(root / "freeze.json", {"run_id": run_id, "created_utc": now(), "requested_model": MODEL,
-         "conditions": list(CONDITIONS), "tasks_sha256": sha(task_file), "runner_path": str(runner_path),
+         "conditions": list(conditions), "tasks_sha256": sha(task_file), "runner_path": str(runner_path),
          "runner_sha256": runner_hash, "source_tasks": str(tasks_path), "source_tasks_sha256": sha(tasks_path),
          "data_root": str(data_root), "timeout_seconds": args.timeout, "common_prompt_sha256": digest_bytes(COMMON.encode()),
          "frozen_hashes": frozen_hashes, "evaluation_scope": "context_only_generation",
          "material_ingestion": "runner_verified", "agent_file_read": "not_evaluated",
          "autonomous_tool_compliance": "blocked_by_runtime", "task_count": len(frozen_tasks),
-         "planned_generations": len(frozen_tasks) * len(CONDITIONS)})
+         "planned_generations": len(frozen_tasks) * len(conditions)})
     (root / "freeze.sha256").write_text(sha(root / "freeze.json") + "  freeze.json\n", encoding="ascii")
     return root
 
@@ -265,8 +278,8 @@ def verify_frozen_case(case: Path, root: Path) -> tuple[bool, list[str]]:
     manifest_path = case / "workspace-manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     changed = []
-    for group in ("materials", "bundle"):
-        for relative, expected in manifest[group].items():
+    for group in ("materials", "bundle", "response_schema"):
+        for relative, expected in manifest.get(group, {}).items():
             path = case / relative
             if not path.is_file() or sha(path) != expected:
                 changed.append(relative)
@@ -291,7 +304,7 @@ def materialize(case: Path, workspace: Path) -> dict[str, str]:
     if not ok:
         raise ValueError("Frozen task changed: " + ", ".join(changed))
     manifest = json.loads((case / "workspace-manifest.json").read_text(encoding="utf-8"))
-    files = {**manifest["materials"], **manifest["bundle"]}
+    files = {**manifest["materials"], **manifest["bundle"], **manifest.get("response_schema", {})}
     for relative, expected in files.items():
         src, dest = case / relative, workspace / relative
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -342,6 +355,29 @@ def validate_response(text: str, kind: str) -> tuple[str, str]:
     return "valid", "pass" if passed else "fail"
 
 
+def audit_evidence_quotes(response: str, case: Path) -> dict:
+    """Check literal provenance only. An authentic quote may support a false claim."""
+    result = {"status": "missing", "rows": [], "semantic_support": "not_automatically_evaluated"}
+    try:
+        obj = json.loads(response)
+    except (ValueError, TypeError):
+        return {**result, "status": "invalid_response"}
+    rows = obj.get("evidence") if isinstance(obj, dict) else None
+    if not isinstance(rows, list) or not rows:
+        return result
+    manifest = json.loads((case / "workspace-manifest.json").read_text(encoding="utf-8"))
+    for index, row in enumerate(rows):
+        path = row.get("material_path") if isinstance(row, dict) else None
+        quote = row.get("quote") if isinstance(row, dict) else None
+        # Resolve only manifest-listed originals, never model-supplied filesystem paths.
+        known = isinstance(path, str) and path in manifest["materials"]
+        original = (case / path).read_text(encoding="utf-8") if known else ""
+        exact = known and isinstance(quote, str) and bool(quote.strip()) and quote in original
+        result["rows"].append({"index": index, "known_material": known, "exact_quote": exact})
+    result["status"] = "pass" if all(r["exact_quote"] for r in result["rows"]) else "fail"
+    return result
+
+
 def run_one(root: Path, task: dict, condition: str, args: argparse.Namespace) -> dict:
     run_dir = root / "runs" / task["id"] / condition
     run_dir.mkdir(parents=True, exist_ok=False)
@@ -355,7 +391,8 @@ def run_one(root: Path, task: dict, condition: str, args: argparse.Namespace) ->
     cmd = [str(CODEX), "exec", "--json", "--ephemeral", "--ignore-user-config", "--disable", "apps",
            "--disable", "plugins", "--disable", "memories", "--disable", "hooks", "--enable",
            "skip_host_skill_discovery", "-c", 'model_reasoning_effort="low"', "--sandbox", "read-only",
-           "--model", args.model, "--skip-git-repo-check", "--cd", str(workspace), "-"]
+           "--model", args.model, "--output-schema", str(workspace / "response-schema.json"),
+           "--skip-git-repo-check", "--cd", str(workspace), "-"]
     started = now()
     t0 = time.monotonic()
     execution_state, error, returncode = "error", None, None
@@ -384,6 +421,7 @@ def run_one(root: Path, task: dict, condition: str, args: argparse.Namespace) ->
     completed = [e for e in events if e.get("type") == "turn.completed"]
     failed = any(e.get("type") == "turn.failed" for e in events)
     json_status, schema_status = validate_response(response, task["kind"]) if response else ("missing", "missing")
+    quote_audit = audit_evidence_quotes(response, case)
     case_ok, changed = verify_frozen_case(case, root)
     workspace_changed = {rel: (workspace / rel).is_file() and sha(workspace / rel) == expected
                          for rel, expected in file_hashes.items()}
@@ -401,6 +439,7 @@ def run_one(root: Path, task: dict, condition: str, args: argparse.Namespace) ->
                             not failed and json_status == "valid" and schema_status == "pass" and case_ok and
                             all(workspace_changed.values()) and prompt_hash_ok and workspace_prompt_hash_ok)
     result = {"run_id": root.name, "task_id": task["id"], "kind": task["kind"], "split": task["split"],
+              "evidence_quote_audit": quote_audit,
               "condition": condition, "requested_model": args.model, "resolved_model": resolved_model,
               "started_utc": started, "elapsed_seconds": round(elapsed, 3), "return_code": returncode,
               "execution_state": execution_state, "task_outcome": "unknown", "error": error,
@@ -434,6 +473,8 @@ def main() -> int:
     p.add_argument("--data-root", type=Path, required=True)
     p.add_argument("--runs", type=Path, default=DEFAULT_RUNS)
     p.add_argument("--run-id")
+    p.add_argument("--condition", dest="conditions", action="append", choices=CONDITIONS,
+                   help="Freeze selected conditions; default runs both. Use a separate run for repair-only trials.")
     p.add_argument("--timeout", type=int, default=900)
     p.set_defaults(func=prepare)
     p = subs.add_parser("run", help="Run each task/condition in a fresh isolated workspace")
@@ -468,7 +509,7 @@ def main() -> int:
     failures = []
     stop = False
     for task in tasks:
-        for condition in CONDITIONS:
+        for condition in freeze["conditions"]:
             result = run_one(root, task, condition, args)
             print(json.dumps({k: result[k] for k in ("task_id", "condition", "execution_state", "generation_countable")}, ensure_ascii=False), flush=True)
             if not result["generation_countable"]:

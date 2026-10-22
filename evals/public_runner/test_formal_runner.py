@@ -12,22 +12,32 @@ import formal_runner as formal
 import run_public_eval as base
 
 
-PILOT = Path(r"D:\XiangMuLuoDi\Development\word-skills-public-eval\runs\public-pilot-context-20261020")
-DATA = Path(r"D:\XiangMuLuoDi\Development\word-skills-public-eval\data\formal-v1")
-TASKS = DATA / "formal-v1-development.jsonl"
-
-
-@unittest.skipUnless(PILOT.is_dir() and TASKS.is_file(), "public pilot/data package unavailable")
 class FormalRunnerTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
+        self.data = self.root / "data"
+        self.data.mkdir()
+        material = self.data / "evidence.txt"
+        material.write_text("Synthetic offline fixture: the example accepts typed input.", encoding="utf-8")
+        tasks = [{"id": name, "kind": kind, "split": "development",
+                  "request": "Describe the supplied synthetic fixture.",
+                  "materials": [{"path": "evidence.txt", "sha256": base.sha(material), "source_id": "S1"}]}
+                 for name, kind in [("scifact-0009-train-dev", "factual-qa"),
+                                    ("fastapi-technical-report-dev", "technical-report"),
+                                    *[(f"fixture-{i:02}", "factual-qa") for i in range(14)]]]
+        self.tasks = self.data / "tasks.jsonl"
+        self.tasks.write_text("".join(json.dumps(t) + "\n" for t in tasks), encoding="utf-8")
+        prototype_tasks = self.data / "prototypes.jsonl"
+        prototype_tasks.write_text("".join(json.dumps(t) + "\n" for t in tasks[:2]), encoding="utf-8")
+        self.pilot = base.prepare(Namespace(tasks=prototype_tasks, data_root=self.data,
+                                            runs=self.root / "pilots", run_id="fixture-pilot", timeout=10))
 
     def tearDown(self):
         self.temp.cleanup()
 
     def prepare(self, name="formal", **kwargs):
-        args = Namespace(pilot_run=PILOT, tasks=TASKS, data_root=DATA,
+        args = Namespace(pilot_run=self.pilot, tasks=self.tasks, data_root=self.data,
                          out=self.root / name, repeat=kwargs.pop("repeat", 3), seed=23,
                          split=kwargs.pop("split", ["development"]), task=kwargs.pop("task", None),
                          condition=kwargs.pop("condition", None), conditions_config=None,
@@ -55,8 +65,8 @@ class FormalRunnerTests(unittest.TestCase):
         task_id = "fastapi-technical-report-dev"
         root = self.prepare("expanded-bundle", task=[task_id], repeat=1)
         task = formal.read_jsonl(root / "tasks.jsonl")[0]
-        pilot_task = next(t for t in base.read_tasks(PILOT / "tasks.jsonl") if t["kind"] == task["kind"])
-        pilot_case = PILOT / "frozen" / pilot_task["id"] / "current"
+        pilot_task = next(t for t in base.read_tasks(self.pilot / "tasks.jsonl") if t["kind"] == task["kind"])
+        pilot_case = self.pilot / "frozen" / pilot_task["id"] / "current"
         expected_bundle = json.loads((pilot_case / "bundle-manifest.json").read_text(encoding="utf-8"))
         plain_case = root / "frozen" / task_id / "A"
         current_case = root / "frozen" / task_id / "B"
@@ -75,8 +85,8 @@ class FormalRunnerTests(unittest.TestCase):
 
     def test_expanded_task_selected_skill_subset_is_exact_and_hash_verified(self):
         task_id = "fastapi-technical-report-dev"
-        pilot_task = next(t for t in base.read_tasks(PILOT / "tasks.jsonl") if t["kind"] == "technical-report")
-        pilot_case = PILOT / "frozen" / pilot_task["id"] / "current"
+        pilot_task = next(t for t in base.read_tasks(self.pilot / "tasks.jsonl") if t["kind"] == "technical-report")
+        pilot_case = self.pilot / "frozen" / pilot_task["id"] / "current"
         available = json.loads((pilot_case / "bundle-manifest.json").read_text(encoding="utf-8"))
         selected = ["skills/oh-my-technology/references/technical-report.md",
                     "skills/word-document/references/evidence.md"]
@@ -85,7 +95,7 @@ class FormalRunnerTests(unittest.TestCase):
         config.write_text(json.dumps({"conditions": [{"id": "E4-ondemand", "base_condition": "plain",
                                                       "prompt_append": "Use only these selected process references.",
                                                       "extra_sources": [], "skill_files": selected}]}), encoding="utf-8")
-        args = Namespace(pilot_run=PILOT, tasks=TASKS, data_root=DATA, out=self.root / "subset-run",
+        args = Namespace(pilot_run=self.pilot, tasks=self.tasks, data_root=self.data, out=self.root / "subset-run",
                          repeat=1, seed=23, split=["development"], task=[task_id], condition=None,
                          conditions_config=config, context_root=None, reuse_from=None)
         root = formal.prepare(args)

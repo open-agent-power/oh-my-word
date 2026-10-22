@@ -40,6 +40,20 @@ class PublicRunnerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unexpected task fields"):
             runner.read_tasks(self.tasks)
 
+    def test_domain_writing_tasks_get_only_their_applicable_skill(self):
+        for kind, expected, excluded in (
+            ("copyright-manual", "skills/oh-my-copyright/SKILL.md", "skills/oh-my-patent/SKILL.md"),
+            ("patent-outline", "skills/oh-my-patent/SKILL.md", "skills/oh-my-copyright/SKILL.md"),
+        ):
+            with self.subTest(kind=kind):
+                task = {**self.task, "kind": kind}
+                self.tasks.write_text(json.dumps(task) + "\n", encoding="utf-8")
+                self.assertEqual(runner.read_tasks(self.tasks)[0]["kind"], kind)
+                bundle = {p.relative_to(runner.REPO).as_posix() for p in runner.relevant_bundle(task)}
+                self.assertIn(expected, bundle)
+                self.assertNotIn(excluded, bundle)
+                self.assertTrue(all(p.is_file() for p in runner.relevant_bundle(task)))
+
     def test_prepare_freezes_context_and_relevant_bundle(self):
         root = self.prepare()
         task = json.loads((root / "tasks.jsonl").read_text(encoding="utf-8"))
@@ -61,6 +75,39 @@ class PublicRunnerTests(unittest.TestCase):
         sources = prompt.split("Frozen source text", 1)[1]
         self.assertIn('"role":"material"', sources)
         self.assertIn('"role":"skill_reference"', sources)
+
+    def test_quote_audit_rejects_rewritten_or_outside_materials_but_not_semantics(self):
+        root = self.prepare()
+        case = root / "frozen/qa-01/plain"
+        path = "materials/task/materials/evidence.txt"
+        for quote, material, expected in (
+            ("The project uses typed routes.", path, "pass"),
+            ("The project ... typed routes.", path, "fail"),
+            ("The project uses typed routes.", "../../private", "fail"),
+            ("", path, "fail"),
+        ):
+            result = runner.audit_evidence_quotes(json.dumps({"evidence": [{
+                "claim": "The project does NOT use typed routes.", "material_path": material, "quote": quote}]}), case)
+            self.assertEqual(result["status"], expected)
+            self.assertEqual(result["semantic_support"], "not_automatically_evaluated")
+
+    def test_response_schema_is_frozen_and_copied(self):
+        root = self.prepare()
+        case = root / "frozen/qa-01/plain"
+        workspace = self.root / "workspace"
+        workspace.mkdir()
+        runner.materialize(case, workspace)
+        self.assertEqual((workspace / "response-schema.json").read_bytes(), (case / "response-schema.json").read_bytes())
+        (case / "response-schema.json").write_text("{}")
+        self.assertFalse(runner.verify_frozen_case(case, root)[0])
+
+    def test_repair_only_run_has_an_explicit_frozen_denominator(self):
+        root = runner.prepare(Namespace(tasks=self.tasks, data_root=self.data, runs=self.runs,
+                                        run_id="repair", timeout=10, conditions=["current"]))
+        freeze = json.loads((root / "freeze.json").read_text(encoding="utf-8"))
+        self.assertEqual(freeze["conditions"], ["current"])
+        self.assertEqual(freeze["planned_generations"], 1)
+        self.assertFalse((root / "frozen/qa-01/plain").exists())
 
     def test_execution_preserves_cli_trace_stderr_and_top_level_usage(self):
         root = self.prepare()
