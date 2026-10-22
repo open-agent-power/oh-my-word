@@ -104,3 +104,11 @@
 证据与交付位于仓库外 `../word-skills-reuse-trial/writing-pilot/`：`review-report.md`、`evidence/acceptance.json`、`evidence/reuse-verification.json`、`evidence/cost.json`、`delivery/` 和 `manual-pilot-delivery.zip`。这里验证了小型操作手册的材料复用路径，不代表所有Skill默认入口已经调整，也未验证专利专业质量。
 
 运行代码身份为 `3944728e691f73dbe5df1b5b5c47d59731dce803e27d31a0647cf7a22f6c348a`，Skill身份为 `485a8787473d60babd7e0f4f7a9fc38a6fff97ff35a8faeaca792f99a6da8395`；包含前轮未提交实现。原有105份脏文件内容哈希保持不变。后续专利轮、GitHub对齐，以及固定字数下限是否合理，保持独立范围。
+
+## 材料使用入口收敛（2026-10-22）
+
+在上述试用及 GitHub 对齐提交 `cca0dbb` 之后，总入口、软著、专利、技术文档与 Word 制作入口已统一材料使用指导：少量固定原件直接阅读，同案修改复用已有业务记录；资料量大、跨来源定位困难或用户明确要求检索时使用已有知识入口。规则时效核对、已有知识绑定及改稿后审阅仍按原流程执行。检索代码、服务和本机索引配置未改。
+
+两套结构检查、5个 Skill 格式校验以及知识绑定/软著流程的25项既有测试通过。另做一次局部措辞试用：主线程核对13个已登记源文件哈希与8.0.4版本，只改手册5.2节的一段说明，原件保持不变；标准输入示例实际返回 `hello-world`，无新增 prepare、业务分析、知识检索或联网。“处理速度提升50%”没有比较基线，未写入稿件。本轮没有生成新的 Word，也没有验证专利专业质量或通用遵从率。
+
+独立试用未完整通过：6luna两次因服务503未产出；备用Agent完成阅读与修改建议，但写入失败。最终修改稿和核对由主线程完成，不能记为独立端到端验证通过。旧的早期案件基线有3份非手册记录与当前不同，未拿旧基线冒充当前身份；本次另存当前输入哈希。局部证据保存在本机忽略目录 `.agent/evidence/material-routing-main/`，包含 `manual.md`、`manual.diff` 和 `verification.json`。

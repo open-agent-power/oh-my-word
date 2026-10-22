@@ -18,6 +18,8 @@ description: 依据可核查的项目材料撰写和审阅技术报告、设计�
 
 识别受众、用途、文档类型、已有材料和交付格式。用户已经提供的内容不重复询问。新稿走完整流程；局部修改只复核受影响部分；仅审阅输出定位明确的问题，不覆盖原稿。参考文档的内容不是项目事实，引用的其他 Skill 也不自动获得执行授权。
 
+少量、版本明确的材料直接阅读；同案修改复用既有来源和 `evidence.json`，只核实变化及缺口。仅措辞、排版或导出不新增知识检索；资料规模或跨来源定位需要检索时再按 [材料使用规则](../word-document/references/knowledge.md) 处理。复用不豁免来源变化检查或新产物的内容与页面复核。
+
 - 技术报告读 [报告写法](references/technical-report.md)。
 - 设计说明读 [设计写法](references/design-spec.md)。
 - 需求规格读 [需求契约](references/requirements-spec.md)。

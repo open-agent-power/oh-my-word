@@ -7,6 +7,8 @@ description: 将已组织好的专业文档内容制作成 Word，导入基本�
 
 使用成熟库完成 DOCX 操作，保留可追溯输入和实际预览。当前通用生成以 python-docx 为主，显式插槽模板使用 docxtpl；专利继续使用原独立工具，本技能不修改专利格式。
 
+仅排版或导出时复用既有正文、来源与事实记录，不为制作 Word 重做业务分析或知识检索。来源或事实需要改变时返回相应业务技能处理；新产物仍需复核，旧审阅不能自动覆盖新文件。
+
 1. 读取 [证据与中间稿契约](references/evidence.md)，核对输入格式。
 2. 用户有参考 Word 时读取 [模板支持范围](references/templates.md)，先 fingerprint，再选择 style 或 slots 模式。
 3. 调用 `python -m word_skills build`。没有模板时默认 A4、中文正文、黑色标题、可换行表格和页码。
