@@ -106,9 +106,19 @@ def _execute(stage, arguments):
         module.require_confirmed_business = require_business
         if stage == "fields":
             original_fields = module.build_fields
+            original_write = module.write_application_md
+            # Upstream's fallback pads to 500 characters using generic features.
+            # Missing evidence must remain visible; never synthesize functionality.
+            module.summarize_features = lambda *a, **kw: "待用户确认"
 
             def conservative_fields(analysis, manifest, name, version, answers, business=None):
                 fields = original_fields(analysis, manifest, name, version, answers, business)
+                authored = answers.get("软件的主要功能") or (business or {}).get("main_functions")
+                if authored is not None and not isinstance(authored, str):
+                    raise ValueError("main_functions must be authored text")
+                # Preserve even short/long text for review; downstream length checks
+                # can report it, but may not replace it with invented filler.
+                fields["软件的主要功能"] = authored.strip() if authored and authored.strip() else "待用户确认"
                 for field in ("开发方式", "软件说明", "权利范围", "权利取得方式", "开发的硬件环境",
                               "运行的硬件环境", "开发该软件的操作系统", "软件开发环境 / 开发工具",
                               "该软件的运行平台 / 操作系统", "软件运行支撑环境 / 支持软件"):
@@ -117,6 +127,15 @@ def _execute(stage, arguments):
                 return fields
 
             module.build_fields = conservative_fields
+
+            def write_fields(path, *args, **kwargs):
+                original_write(path, *args, **kwargs)
+                with path.open("a", encoding="utf-8") as stream:
+                    stream.write("\n本稿为填写辅助。500~1300字为固定上游兼容校验；"
+                                 "应对照当次官方表单核对，不以转载代替官方依据。"
+                                 "内容不足时补充真实材料，不能凑字或增加未经证实的功能。\n")
+
+            module.write_application_md = write_fields
         if stage == "manual":
             original_related = module.normalize_related_documents
 

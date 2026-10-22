@@ -81,6 +81,31 @@ def test_fields_do_not_turn_test_machine_into_development_facts(tmp_path):
     assert not read_json(tmp_path / "business.json")["user_confirmed"]
 
 
+@pytest.mark.parametrize("authored,answer,expected", [
+    ("按分隔符截断输入，返回处理后的字符串。", None, "按分隔符截断输入，返回处理后的字符串。"),
+    ("", None, "待用户确认"),
+    ("业务模型中的原始说明", "仅执行命令并打印结果。", "仅执行命令并打印结果。"),
+    ("事实说明" * 400, None, "事实说明" * 400),
+])
+def test_fields_never_pad_or_replace_authored_functionality(tmp_path, authored, answer, expected):
+    write_json(tmp_path / "analysis.json", {"project_root": str(tmp_path), "source": {"total_line_count": 2}})
+    write_json(tmp_path / "business.json", {"confirmation_required": True, "user_confirmed": False,
+               "main_functions": authored, "application_purpose": "文本处理"})
+    write_json(tmp_path / "code.json", {"submitted_page_count": 1, "mode": "all_under_60_pages"})
+    write_json(tmp_path / "answers.json", {"软件的主要功能": answer} if answer else {})
+    result = stage("fields", "--preview", "--analysis", tmp_path / "analysis.json",
+                   "--code-manifest", tmp_path / "code.json", "--software-name", "测试软件",
+                   "--business-context", tmp_path / "business.json", "--answers", tmp_path / "answers.json",
+                   "--out-dir", tmp_path / "draft")
+    assert result.returncode == 0, result.stderr
+    text = (tmp_path / "draft/申请表信息.md").read_text(encoding="utf-8")
+    row = next(line for line in text.splitlines() if line.startswith("➤软件的主要功能："))
+    assert row == "➤软件的主要功能：" + expected
+    assert "系统提供数据持久化存储" not in text
+    assert "固定上游兼容校验" in text
+    assert read_json(tmp_path / "business.json")["user_confirmed"] is False
+
+
 @pytest.fixture
 def manual_case(tmp_path):
     root, case = tmp_path / "source", tmp_path / "case"

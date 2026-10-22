@@ -1,0 +1,10 @@
+--- a/slugify/__main__.py
++++ b/slugify/__main__.py
+@@ -77,6 +77,7 @@
+         separator=args.separator,
+         stopwords=args.stopwords,
+         lowercase=args.lowercase,
++        regex_pattern=args.regex_pattern,
+         replacements=args.replacements,
+         allow_unicode=args.allow_unicode
+     )
