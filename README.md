@@ -25,6 +25,8 @@ python tools/check_word_skills.py
 
 安装包不包含真实案卷、`outputs/`、本机证据、LibreOffice、Poppler 或字体。完整 monorepo 是受支持的 Skill 安装形态，不能只复制一个 `SKILL.md` 就声称共享资源已安装。
 
+制作前可运行 `python tools/check_delivery_environment.py --soffice SOFFICE_EXE --pdftoppm PDFTOPPM_EXE`，只读核对Python依赖、转换工具版本与本机客户端/字体是否存在。缺失返回退出码2，不自动下载或安装；显式路径无效时不换另一个工具。检测到Word/WPS不代表已完成兼容测试，仍须实际打开或渲染目标文档核对。
+
 `requirements-tested.txt` 记录验收使用的直接依赖版本，可在新环境用 `python -m pip install -r requirements-tested.txt` 安装后，再执行 `python -m pip install -e . --no-deps`。它不是传递依赖锁文件。独立 wheel 包含 Python 工具、Schema、注册表快照及所需上游脚本；完整 Skill 文案仍需本仓库。字体及 PDF 预览工具由使用环境显式配置。
 
 ## 总入口与路由

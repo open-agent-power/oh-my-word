@@ -150,3 +150,11 @@ AI公开检查现对明确排除范围与紧邻模型术语的否定表达做词
 14项离线runner测试及2个子测试通过。旧formal测试依赖本机历史目录及旧runner哈希，已改为临时合成fixture；没有改旧实验的固定输入或降低过期校验。全部原始输出、用量、对照审计、补充运行与修订位于 `../word-skills-reuse-trial/maintenance-20261022/domain-cases/`，结果见 `results.json`。公开代码练习仍不足以证明真实专利质量或替代专业审查。
 
 只读代码复核发现首轮否定过滤会吞掉“且/并且”后明确的正向训练；已单独修复常见并列连接边界并增加正反例，73项AI/final测试及74个子测试通过。同一复核者实际重跑原两项反例、并且训练及否定并列对照后关闭该finding。此修复覆盖已列连接方式，仍不声称理解所有中文否定范围。
+
+## 可用环境与实际排版核验（2026-10-23）
+
+新增只读交付预检工具，记录当前Python依赖、指定转换程序的真实路径/版本、字体文件及Office客户端存在状态；不安装软件、不激活Office，不把检测到客户端写成兼容性通过。显式路径错误时拒绝默默切换程序。Windows的LibreOffice版本查询采用同安装目录的控制台入口与临时独立profile，解决本机GUI入口查询超时。
+
+三份纠错后的公开样稿均经现有后端生成Word、LibreOffice PDF/页图，并使用本机WPS以只读方式打开、导出PDF和页图。两引擎各3页均已实际看图，未见遮挡、溢出或缺字。LibreOffice为26.8.1.1；WPS安装目录版本12.1.0.29161、COM报告12.0。Word未安装，其他版本与复杂客户模板没有验证。机器检查均为0项DOCX结构问题，不代表语义或法律有效性。
+
+另复跑gin-table、flask-inline、express-table三个既有排版案例，各4页；12张LibreOffice页图全部看过，正文和表格单元格内容/顺序保持，普通跨页表格表头重复、未见行被裁断。短尾页留白和表格内字面Markdown仍存在；页高以上的超高行及复杂模板不在此次样本覆盖内。这是明确范围的排版回归，不是所有客户端兼容认证。外部证据在 `../word-skills-reuse-trial/maintenance-20261022/` 的 `environment-fixed.json`、`reviewed-documents/`、`layout-regression/` 和 `visual-review.json`。
