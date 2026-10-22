@@ -52,7 +52,11 @@ desktop.ini
 .agent/
 outputs.zip
 private-corpus/
+knowledge.local.json
 eval-runs/
+
+# Raw research-page captures are local evidence, not runtime resources.
+/references/research/
 
 # ---- 外部参考的第三方 skill 包 ----
 # 从压缩包解压出来的参考实现（约 2.6 万个文件，其中 2.5 万个是 node_modules），

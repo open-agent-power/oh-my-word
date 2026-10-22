@@ -190,6 +190,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_tpl.add_argument("--docx", action="store_true", help="改生成 .docx 空白模板而不是 Markdown 骨架")
     p_tpl.add_argument("--style", help=".docx 模板中的字体（仅 --docx 时有效）", default="宋体")
     p_tpl.add_argument("--font-size", type=float, default=BODY_FONT_SIZE_PT, help="正文字号（仅 --docx 时有效）")
+    p_tpl.add_argument("--knowledge", help="固定知识索引；在稿件旁生成待阅读的专利规则上下文")
 
     # ---- ingest ----
     p_ing = sub.add_parser(
@@ -251,6 +252,9 @@ def _make_options(args: argparse.Namespace) -> RenderOptions:
 
 
 def _load_draft(path: str, type_override: str | None = None) -> PatentDraft:
+    if Path(str(path) + ".knowledge.json").exists():
+        from word_skills.knowledge_context import patent_context
+        patent_context(path)
     draft = draft_parser.load(path)
     if type_override:
         draft.patent_type = _TYPE_CHOICES[type_override]
@@ -259,7 +263,19 @@ def _load_draft(path: str, type_override: str | None = None) -> PatentDraft:
 
 def cmd_build(args: argparse.Namespace) -> int:
     options = _make_options(args)
+    knowledge = None
+    if Path(str(args.draft) + ".knowledge.json").exists():
+        from word_skills.knowledge_context import patent_context
+        from word_skills.common import sha256
+        knowledge = patent_context(args.draft)
+        knowledge["draft_sha256"] = sha256(args.draft)
+        if Path(args.output).exists():
+            raise ValueError("Knowledge-bound generation needs a fresh output path")
+        if Path(str(args.output) + ".knowledge.json").exists():
+            raise ValueError("Knowledge receipt already exists; use a fresh output")
     draft = _load_draft(args.draft, args.type)
+    if knowledge and sha256(args.draft) != knowledge["draft_sha256"]:
+        raise ValueError("Patent draft changed during loading")
     report = lint(draft)
 
     if args.final:
@@ -286,6 +302,9 @@ def cmd_build(args: argparse.Namespace) -> int:
         return 2
 
     written = render_docx(draft, args.output, options=options, split=args.split)
+    if knowledge:
+        from word_skills.knowledge_context import record_patent_context
+        record_patent_context(args.draft, written, knowledge, str(args.output) + ".knowledge.json")
     print(f"已生成 {len(written)} 个审阅文件（正式电子申请需官方 XML 转换及核对）：")
     for path in written:
         size_kb = path.stat().st_size / 1024
@@ -387,6 +406,13 @@ def cmd_info(args: argparse.Namespace) -> int:
 
 
 def cmd_template(args: argparse.Namespace) -> int:
+    if getattr(args, "knowledge", None):
+        from word_skills.knowledge_context import prepare_patent_context
+        if not args.output and not args.docx:
+            raise ValueError("--knowledge requires -o to keep source context beside the draft")
+        target = args.output or f"模板_{_TYPE_CHOICES[args.patent_type].label}.docx"
+        binding = prepare_patent_context(args.knowledge, target)
+        print(f"已保存待阅读的固定知识来源：{binding}；未核验语义或本案事实。")
     if args.docx:
         return _write_docx_template(args)
     return _write_markdown_template(args)

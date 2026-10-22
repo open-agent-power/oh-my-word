@@ -14,6 +14,8 @@ from docx.oxml.ns import qn
 from docx.shared import Mm, Pt, RGBColor
 
 from .common import check_docx, inside, sha256
+from .inline import inline_runs
+from .models import validate_renderable_draft
 
 STYLE_NAMES = ["Normal", "Title", "Heading 1", "Heading 2", "Heading 3"]
 SECTION_ATTRS = ["page_width", "page_height", "top_margin", "bottom_margin", "left_margin", "right_margin", "header_distance", "footer_distance"]
@@ -138,7 +140,20 @@ def append_content(doc, draft, title=True, asset_root=None):
                     run.font.size = Pt(8)
             elif block["type"] == "paragraph":
                 level = block.get("heading_level")
-                p = doc.add_paragraph(block["text"], f"Heading {level}" if level in (1, 2, 3) else None)
+                p = doc.add_paragraph(style=f"Heading {level}" if level in (1, 2, 3) else None)
+                if block.get("inline_format") == "markdown":
+                    for text, is_code in inline_runs(block["text"]):
+                        run = p.add_run(text)
+                        if is_code:
+                            run.font.name = "Consolas"
+                            rpr = run._element.get_or_add_rPr()
+                            rfonts = rpr.rFonts
+                            if rfonts is None:
+                                rfonts = OxmlElement("w:rFonts")
+                                rpr.insert(0, rfonts)
+                            rfonts.set(qn("w:eastAsia"), "Consolas")
+                else:
+                    p.add_run(block["text"])
                 p.paragraph_format.widow_control = True
                 if block.get("monospace"):
                     p.paragraph_format.line_spacing = 1
@@ -176,6 +191,12 @@ def append_content(doc, draft, title=True, asset_root=None):
                 for row in block["rows"]:
                     for cell, text, w in zip(table.add_row().cells, row, widths):
                         cell.text, cell.width = str(text), w
+                # Keep ordinary rows intact so labels and their values do not
+                # get separated across pages. A row taller than a page can
+                # still split in Word/LibreOffice despite this OOXML hint.
+                for row in table.rows:
+                    cant_split = OxmlElement("w:cantSplit")
+                    row._tr.get_or_add_trPr().append(cant_split)
                 borders = OxmlElement("w:tblBorders")
                 for side in ("top", "left", "bottom", "right", "insideH", "insideV"):
                     border = OxmlElement("w:" + side)
@@ -204,10 +225,10 @@ def append_content(doc, draft, title=True, asset_root=None):
                             paragraph.paragraph_format.space_before = Pt(3)
                             for run in paragraph.runs:
                                 run.bold = r == 0
-                doc.add_paragraph().paragraph_format.space_after = Pt(2)
 
 
 def render(draft, output, template=None, template_mode="style", *, asset_root=None):
+    draft = validate_renderable_draft(draft)
     profile = None
     if template:
         profile = fingerprint(template)

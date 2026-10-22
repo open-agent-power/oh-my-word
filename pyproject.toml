@@ -58,3 +58,7 @@ include = ["oh_my_patent*", "word_skills*"]
 [tool.setuptools.package-data]
 word_skills = ["schemas/*.yaml", "data/*.yaml", "data/proposal-profiles/*.yaml"]
 "word_skills._vendor.fokkyp" = ["LICENSE", "UPSTREAM.json", "SKILL.md", "references/*.md"]
+
+[tool.pytest.ini_options]
+# Generated deliveries can contain imported projects with their own tests.
+testpaths = ["tests", "evals"]

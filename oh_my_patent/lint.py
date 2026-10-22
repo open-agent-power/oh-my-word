@@ -737,6 +737,11 @@ def _looks_like_reference_numeral(run: str, tail: str) -> bool:
     「这个数字是不是附图标记」并不需要知道名词，只需要排除掉
     条目编号与量值两类干扰。
     """
+    # The integer prefix of a decimal is a parameter value, not an integer
+    # drawing label (for example “取1.5” or “取0.75”). A sentence period
+    # followed by prose must still allow real labels such as “壳体1.其内…”.
+    if re.match(r"[.．]\d", tail.lstrip()):
+        return False
     if run.endswith(_NUMERAL_CONNECTORS):
         return False
     if run.endswith(_NUMERAL_NOUN_SUFFIXES):

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "S1",
+      "path": "technical.txt",
+      "sha256": "da515fb75d5c533593821d8e542770c5dc9747ec48cea8aa35102012256d542f"
+    }
+  ],
+  "facts": [
+    {
+      "id": "F1",
+      "text": "采集数字温度传感器的温度值",
+      "status": "verified",
+      "source_id": "S1",
+      "locator": "技术方案与实施方式",
+      "quote": "获取传感器温度值"
+    },
+    {
+      "id": "F2",
+      "text": "将温度值存入存储器",
+      "status": "verified",
+      "source_id": "S1",
+      "locator": "技术方案与实施方式",
+      "quote": "将所述温度值存储到存储器"
+    },
+    {
+      "id": "F3",
+      "text": "存储失败时返回错误并保留原读数重试",
+      "status": "verified",
+      "source_id": "S1",
+      "locator": "具体实施方式",
+      "quote": "存储失败时返回错误，保留原读数供重试。"
+    }
+  ]
+}

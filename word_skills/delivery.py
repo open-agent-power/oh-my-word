@@ -9,6 +9,7 @@ from .common import digest, finding, inside, now, read_json, sha256, write_json
 from .evidence import contract, validate
 from .inspect import inspect_docx, inspect_pdf, preview
 from .render import fingerprint, render
+from .models import validate_draft_v1
 from .review import review_rows, validate_review
 
 
@@ -36,6 +37,7 @@ def skill_identity():
 def build(draft_path, case, output, template=None, template_mode="style", soffice=None, pdftoppm=None, no_preview=False, *, business_gate=None):
     output, case, draft_path = Path(output).resolve(), Path(case).resolve(), Path(draft_path).resolve()
     draft = read_json(draft_path)
+    validate_draft_v1(draft)  # Fail before creating a delivery directory or reading source snapshots.
     required_gate = contract(draft["mode"]).get("business_gate")
     if required_gate != business_gate:
         raise ValueError(f"{draft['mode']} requires its dedicated business build command")

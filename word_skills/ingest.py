@@ -1,6 +1,7 @@
 """Offline ingestion with immutable snapshots and explicit conversion loss notices."""
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 from zipfile import ZipFile
@@ -75,7 +76,16 @@ def ingest(inputs, case, *, text_inputs=()):
             raise ValueError(f"Missing input: {path}")
         if case == path or case.is_relative_to(path):
             raise ValueError("Case output must be outside the input tree")
-        candidates = sorted(path.rglob("*")) if path.is_dir() else [path]
+        if path.is_dir():
+            candidates = []
+            for current, dirs, names in os.walk(path, topdown=True, followlinks=False):
+                folder = Path(current)
+                # Prune before descending; filtering rglob results still walks dependencies.
+                dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS and not (folder / d).is_symlink())
+                candidates.extend(folder / name for name in names)
+            candidates.sort()
+        else:
+            candidates = [path]
         for candidate in candidates:
             relparts = candidate.relative_to(path).parts if path.is_dir() else (candidate.name,)
             if any(p in SKIP_DIRS for p in relparts):

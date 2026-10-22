@@ -7,6 +7,7 @@ dependency of the common Word pipeline.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+import math
 from typing import Any
 
 
@@ -162,6 +163,87 @@ def validate_draft_v1(value: Any) -> dict:
                     for cell in _array(row, f"{block_location}.rows[{k}]"):
                         _string(cell, f"{block_location}.rows[{k}] cell")
                 _array(block.get("widths", []), f"{block_location}.widths")
+    validate_renderable_draft(draft)
+    return draft
+
+
+def validate_renderable_draft(value: Any) -> dict:
+    """Reject unsafe/missing renderer fields before creating any output.
+
+    This shape gate does not add content or certify factual support. Metadata
+    such as schema_version, mode, IDs and evidence is checked by the business
+    pipeline; renderer-neutral evaluation drafts need not carry it.
+    """
+    from .inline import inline_runs
+
+    draft = _object(value, "draft")
+    _string(draft.get("title"), "draft.title")
+    if not draft["title"].strip():
+        raise ValueError("draft.title must be nonempty")
+    sections = _array(draft.get("sections"), "draft.sections")
+    if not sections:
+        raise ValueError("draft.sections must be nonempty")
+    for i, section in enumerate(sections):
+        location = f"draft.sections[{i}]"
+        section = _object(section, location)
+        _string(section.get("title"), f"{location}.title")
+        if not section["title"].strip():
+            raise ValueError(f"{location}.title must be nonempty")
+        level = section.get("level", 1)
+        if type(level) is not int or level not in (1, 2, 3):
+            raise ValueError(f"{location}.level must be 1, 2 or 3")
+        blocks = _array(section.get("blocks"), f"{location}.blocks")
+        if not blocks:
+            raise ValueError(f"{location}.blocks must be nonempty")
+        for j, block in enumerate(blocks):
+            loc = f"{location}.blocks[{j}]"
+            block = _object(block, loc)
+            kind = block.get("type")
+            if kind not in ("paragraph", "code", "image", "table"):
+                raise ValueError(f"{loc}.type must be paragraph, code, image or table")
+            if "style" in block:
+                _string(block["style"], f"{loc}.style")
+            if "heading_level" in block and (
+                type(block["heading_level"]) is not int or block["heading_level"] not in (1, 2, 3)
+            ):
+                raise ValueError(f"{loc}.heading_level must be 1, 2 or 3")
+            if "monospace" in block and type(block["monospace"]) is not bool:
+                raise ValueError(f"{loc}.monospace must be a boolean")
+            if "inline_format" in block:
+                if kind != "paragraph" or block["inline_format"] != "markdown":
+                    raise ValueError(f"{loc}.inline_format supports only paragraph markdown code spans")
+                _string(block.get("text"), f"{loc}.text")
+                try:
+                    inline_runs(block["text"])
+                except ValueError as exc:
+                    raise ValueError(f"{loc}.inline_format: {exc}") from exc
+            if kind != "table":
+                _string(block.get("text"), f"{loc}.text")
+            if kind == "image":
+                for key in ("path", "sha256"):
+                    _string(block.get(key), f"{loc}.{key}")
+            if kind == "table":
+                headers = _array(block.get("headers"), f"{loc}.headers")
+                rows = _array(block.get("rows"), f"{loc}.rows")
+                if not headers or not rows:
+                    raise ValueError(f"{loc} requires nonempty headers and rows")
+                for k, heading in enumerate(headers):
+                    _string(heading, f"{loc}.headers[{k}]")
+                for k, row in enumerate(rows):
+                    _array(row, f"{loc}.rows[{k}]")
+                    if len(row) != len(headers):
+                        raise ValueError(f"{loc}.rows[{k}] must have {len(headers)} cells")
+                    for n, cell in enumerate(row):
+                        _string(cell, f"{loc}.rows[{k}][{n}]")
+                weights = _array(block.get("widths", [1] * len(headers)), f"{loc}.widths")
+                try:
+                    valid = len(weights) == len(headers) and all(
+                        type(w) in (int, float) and math.isfinite(w) and w > 0 for w in weights
+                    ) and math.isfinite(sum(weights))
+                except OverflowError:
+                    valid = False
+                if not valid:
+                    raise ValueError(f"{loc}.widths requires one finite positive number per column")
     return draft
 
 

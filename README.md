@@ -25,6 +25,8 @@ python tools/check_word_skills.py
 
 安装包不包含真实案卷、`outputs/`、本机证据、LibreOffice、Poppler 或字体。完整 monorepo 是受支持的 Skill 安装形态，不能只复制一个 `SKILL.md` 就声称共享资源已安装。
 
+`requirements-tested.txt` 记录验收使用的直接依赖版本，可在新环境用 `python -m pip install -r requirements-tested.txt` 安装后，再执行 `python -m pip install -e . --no-deps`。它不是传递依赖锁文件。独立 wheel 包含 Python 工具、Schema、注册表快照及所需上游脚本；完整 Skill 文案仍需本仓库。字体及 PDF 预览工具由使用环境显式配置。
+
 ## 总入口与路由
 
 ```powershell
@@ -52,6 +54,10 @@ python -m word_skills finalize delivery
 `reviewed` 只表示已记录的内容和版面复核，不表示事实真实性、正式提交、受理或授权。模板支持范围、证据契约和交付状态见 `skills/word-document/references/`。
 
 技术报告、设计说明的新稿需填写 `task_requirements`（用户任务、验收条件和正文块映射）；旧稿仍可构建草稿，补齐后才能定稿。审阅时逐项填写 `task_coverage`、逐事实块填写 `semantic_support`，总体内容和全部页图仍需实际核对。此记录证明已记载的审阅，不是自动语义认证。
+
+技术报告和设计说明还提供可选的 `freeze-content`、`format-content`、`build-locked` 入口，用于冻结正文与来源、应用允许的格式修改并重新制作。它只保护指定入口中的内容一致性，不代替事实审阅或系统权限隔离；使用方法见 [技术文档流程](skills/oh-my-technology/references/workflow.md)。
+
+固定资料入口为 `word-skills kb build/verify/search/context`。无 RAG 配置的资料包可本地查询；已导入的包可调用本机 RAGFlow，返回片段须匹配固定原文，失败不静默切换后端。资料、服务与凭据不随安装包分发，具体配置及证据边界见 [知识接入说明](docs/knowledge-integration.md)。
 
 ## 项目申报与软著准备
 
@@ -102,13 +108,15 @@ python -m word_skills patent template invention -o outputs/draft.md
 ```powershell
 python tools/check_word_skills.py
 python tools/check_skills.py
-python -m pytest tests -q
+python -m pytest -q
 python tools/check_full_dependencies.py
 ```
 
 `check_word_skills.py` 和 `check_skills.py` 只证明结构、路径和声明一致；测试证明确定性代码行为。真实写作质量、事实语义、全部 Word/WPS 版本和用户页面体验仍需按对应材料和环境独立复核。
 
 `check_full_dependencies.py` 使用同一解释器执行 pytest 全部测试并记录依赖版本、测试数和跳过项；缺依赖、失败、skip、xfail 或 xpass 均使验收失败。报告保存在本地 `outputs/acceptance/`。
+
+默认 `pytest` 仅收集 `tests/` 和 `evals/`，避免 `outputs/` 中摄入的外部项目测试被误收集。完整依赖检查器负责 `tests/` 的依赖与执行记录，默认 pytest 另外覆盖实验工具的确定性测试；这些测试不会启动模型跑批或 RAGFlow 部署。
 
 ## 许可与来源
 

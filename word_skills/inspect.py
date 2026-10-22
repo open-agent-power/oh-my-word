@@ -13,6 +13,7 @@ from pypdf import PdfReader
 
 from .common import check_docx, finding, sha256
 from .evidence import block_text
+from .inline import display_text
 
 
 def inspect_docx(path, draft):
@@ -38,7 +39,7 @@ def inspect_docx(path, draft):
             if block["type"] == "code":
                 required = block["text"].splitlines()
             elif block["type"] in {"paragraph", "image"}:
-                required = [block["text"]]
+                required = [display_text(block)]
             else:
                 required = [str(c) for row in [block["headers"]] + block["rows"] for c in row]
             if any(t not in texts for t in required):
@@ -137,7 +138,7 @@ def inspect_pdf(path, draft):
                         f"Spatial extraction could not confirm table header or {missing} required row occurrence(s); check all cells and row counts, including page splits",
                         "warning", location=block["id"]))
             else:
-                if any(normalize(line) not in full_text for line in block["text"].splitlines() if line.strip()):
+                if any(normalize(line) not in full_text for line in display_text(block).splitlines() if line.strip()):
                     issues.append(finding("PDF_CONTENT_REVIEW",
                         "Body text not confirmed by extraction; inspect for missing content or interleaving/page splits",
                         "warning", location=block["id"]))

@@ -2,6 +2,19 @@
 
 开发工作区和发布检出承担不同职责：开发工作区保存持续修改，发布检出只用于验证一个明确的提交。发布检出可以是临时目录，但不能作为长期状态记录的事实源。
 
+## 唯一开发入口与历史目录
+
+当前工作区的活动仓库是 `oh-my-patent/`，项目名称为 `oh-my-word` / `word-skills`。同级 `oh-my-technology/` 是早期 0.1.0 孵化目录，历史内容归档到同级 `.archive/oh-my-technology-0.1.0/`；原位置只保留迁移说明，不保留可导入的 `word_skills` 包或同名发行元数据。
+
+在活动仓库根目录使用项目解释器，避免全局 Python 和历史目录改变模块解析：
+
+```powershell
+.\.venv\Scripts\python.exe -m word_skills --help
+.\.venv\Scripts\python.exe -c "import word_skills; print(word_skills.__file__, word_skills.__version__)"
+```
+
+第二条命令应显示当前仓库中的 `word_skills` 路径。历史目录的源码、环境和产物保留供查阅；若需要独立运行历史版本，请使用隔离环境，不要把归档路径加入活动环境的 `PYTHONPATH`，也不要在活动环境安装归档中的同名包。
+
 ## 开始工作前
 
 在开发工作区记录以下三项身份：
@@ -9,10 +22,10 @@
 ```powershell
 git status --short --branch
 git rev-parse HEAD
-git ls-remote origin refs/heads/main
+git ls-remote --symref origin HEAD
 ```
 
-如果工作区没有 Git 元数据，先初始化本地 `main`，绑定已有远端，再核对工作树是否有未提交改动。已有改动应保留并逐项审阅；不要用远端提交号代替工作树身份。
+已有工作区以 GitHub 默认分支及当前分支的 upstream 为准，不假设默认分支名为 `main`。如果工作区没有 Git 元数据，先确认活动仓库位置，再建立检出；不要在历史归档中初始化新的活动仓库。已有改动应保留并逐项审阅；不要用远端提交号代替工作树身份。
 
 ## 发布前
 

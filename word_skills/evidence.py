@@ -9,6 +9,7 @@ from pathlib import Path
 import yaml
 
 from .common import finding, inside, read_json, sha256
+from .inline import display_text
 from .models import (
     validate_draft_v1,
     validate_evidence_v1,
@@ -41,7 +42,7 @@ def numbers(text):
 def block_text(block):
     if block.get("type") == "table":
         return "\n".join(" | ".join(str(c) for c in row) for row in [block.get("headers", [])] + block.get("rows", []))
-    return block.get("text", "")
+    return display_text(block)
 
 
 def validate(draft, case):

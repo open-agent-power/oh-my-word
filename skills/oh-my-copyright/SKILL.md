@@ -7,6 +7,8 @@ description: 复用 Fokkyp 流程，从真实软件项目生成中文软著材�
 
 主线复用 Fokkyp SoftwareCopyright-Skill 2.6，固定提交及原始 MIT 文件位于 [上游记录](../../word_skills/_vendor/fokkyp/UPSTREAM.json)。直接调用已纳入的脚本；不要另写业务分析器、源码候选生成器或手册生成器。只在本文列明的接口适配、事实与安全边界内改进。完整差异见 [复用说明](../../docs/05-fokkyp-reuse.md)。
 
+准备材料时读取[固定知识索引](../word-document/references/knowledge.md)，使用本机已配置或用户指定的规则索引，以 `prepare --knowledge INDEX` 保存实际检索上下文。规则用于核对材料要求，项目功能仍从真实源码和操作取证，不能以外部资料代填。
+
 ## 执行主线
 
 在仓库环境或已安装 word-skills 的环境运行。`SOURCE` 是真实项目；`CASE` 是源码树之外的新目录。下列占位符须替换为本次实际值。

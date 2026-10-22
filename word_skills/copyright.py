@@ -189,6 +189,15 @@ def _strings_equal(value: Any, expected: str) -> bool:
     return isinstance(value, str) and value.strip() == expected.strip()
 
 
+def _knowledge_materials(value, base_dir):
+    if "knowledge_context" not in value:
+        return {}
+    from .knowledge_context import validate_binding
+    folder, manifest = validate_binding(value["knowledge_context"], base_dir)
+    return {str(folder / rel): checksum for rel, checksum in manifest["inputs"].items()} | {
+        str(folder / "context-manifest.json"): value["knowledge_context"]["sha256"]}
+
+
 def _material_hashes(value, base_dir):
     """Capture files before validation, not after a successful check."""
     paths = [value.get("manual", {}).get("path")] if isinstance(value.get("manual"), dict) else []
@@ -202,6 +211,7 @@ def _material_hashes(value, base_dir):
                     result[str(file)] = sha256(file)
         except (ValueError, OSError):
             pass  # The normal validator reports malformed or missing files.
+    result.update(_knowledge_materials(value, base_dir))
     return result
 
 
@@ -213,6 +223,11 @@ def validate_copyright(value: Any, *, source_root: str | Path | None = None,
     issues: list[dict[str, Any]] = []
     if not isinstance(value, dict) or value.get("schema_version") != SCHEMA_VERSION:
         return {"schema_version": SCHEMA_VERSION, "passed": False, "issues": [_issue("SCHEMA", "copyright draft requires schema_version=1")]}
+    if "knowledge_context" in value:
+        try:
+            _knowledge_materials(value, base_dir)
+        except (ValueError, OSError, TypeError, KeyError) as exc:
+            issues.append(_issue("KNOWLEDGE_CONTEXT", str(exc)))
     software = value.get("software")
     if not isinstance(software, dict):
         issues.append(_issue("SOFTWARE", "software metadata is required"))
@@ -611,6 +626,7 @@ def build(path, out, *, source_root=None, soffice=None, pdftoppm=None, no_previe
         extras = [inside(case_path.parent, item["path"]) for item in value["screenshots"]]
         if manifest_path is not None:
             extras.append(manifest_path)
+        extras.extend(Path(p) for p in _knowledge_materials(value, case_path.parent))
         bound = bind_business_audit(target, "copyright", case_path, result, extras,
                                     source_bytes=source_bytes, extra_hashes=material_hashes)
         if purpose == "preview" and bound["state"] in {"awaiting-review", "draft"}:

@@ -34,6 +34,24 @@ lint 失败先修证据或内容。没有证据时移除无依据陈述，或写
 
 finalize 只验证审阅记录齐全和哈希仍一致，不证明审阅人真的看过文件。不得自动生成 pass；应逐页记录观察和内容审阅依据。
 
+### 可选：锁定内容后排版
+
+技术报告和设计说明完成正文与证据机械校验后，可先冻结输入，再由排版步骤应用受限 patch。用户要求继续改正文时，回到草稿修改并建立新锁；不要重写旧 bundle。
+
+```text
+python -m word_skills freeze-content draft.json --case CASE_DIR --out NEW_LOCK_DIR
+python -m word_skills format-content NEW_LOCK_DIR --patch layout.json --out NEW_FORMATTED.json
+python -m word_skills build-locked NEW_LOCK_DIR --patch layout.json --out NEW_BUILD_DIR --soffice SOFFICE_PATH --pdftoppm PDFTOPPM_PATH
+python -m word_skills review-init NEW_BUILD_DIR/delivery
+# 实际审阅后仍通过原有 finalize 门禁
+```
+
+`format-content` 供单独查看排版后的 JSON；`build-locked` 自己应用同一 patch，不接收外部改写的 JSON。patch 示例：`{"blocks":{"methods-table":{"widths":[1,3],"style":"Table Grid"},"intro":{"inline_format":"markdown"}}}`。仅允许表格 widths/style 和段落 inline_format；正文、来源、claim_ids、intent、标题及版本不在可修改范围。行内 Markdown 只支持普通文本、行内代码和软换行，其他结构报错；表格单元格仍为字面文本。
+
+锁定文件保存正文、账本、登记来源快照/定位及图片哈希，发现变化时拒绝排版/构建；失败产物保留供诊断，换新输出目录重试。现有来源验证仍可能核对 source-index 中存在的原件路径，原件变动会阻止构建，锁定不能绕过该检查。本地清单可被主动重建，不是签名、权限隔离或语义认证。
+
+`locked-build-manifest.json` 是构建时快照，其 finalized=false/semantic_review=not_performed 不随之后的审阅更新；后续审阅状态以 `delivery/manifest.json` 为准。渲染成功仍是 awaiting-review；不渲染为 draft。逐事实块检查对象、关系方向、条件、人群、时间及“提案/已交付”的区别，不能因引文命中就填写 supported。关系模型只作建议，不自动改 verified。
+
 `review-init` 生成的 `task_coverage` 和 `semantic_support` 均为 pending。实际核对后，任务项填 covered/partial/gap/not-applicable 和具体位置、依据或理由；partial/gap 不能定稿，not-applicable 必须确实不属于本次任务，不能用来隐藏缺失要求。事实块填 supported/unsupported，并在 notes 中核对整段的对象、条件和来源支持；unsupported 不能定稿。即使引文和数字全部命中，也应检查无数字的用途、效果或因果是否被无依据加入。所有正文（含 analysis/gap）仍需总体内容审阅。
 
 预览在独立临时目录生成，manifest.renderer.provenance 保存 DOCX/PDF/页图哈希、工具身份和调用参数。PDF 内容提取检查标题、章节、段落及表格单元格是否保留；这不代替分页、重叠及截图对应关系的视觉审阅。技能资源指纹与生成器指纹分别记录；改稿、技能或来源变化后重新构建。

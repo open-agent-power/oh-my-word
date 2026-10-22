@@ -12,6 +12,7 @@ from word_skills import copyright
 from word_skills.common import read_json, write_json, sha256
 from word_skills.copyright_package import prepare, apply_selection, package
 from word_skills.copyright_workflow import VENDOR
+from word_skills.copyright_manual import markdown_blocks
 
 
 def stage(name, *args):
@@ -129,6 +130,48 @@ def test_image_inside_table_is_explicitly_rejected(manual_case, tmp_path):
         "测试软件 V1.0\n\n| 输出 | 说明 |\n| --- | --- |\n| ![结果](result.png) | 查询输出 |\n", encoding="utf-8")
     with pytest.raises(ValueError, match="standalone"):
         copyright.build(manual_case / "copyright.json", tmp_path / "bad-table", purpose="preview", document="manual", no_preview=True)
+
+
+def test_manual_lists_and_nested_commands_reach_word(manual_case, tmp_path):
+    (manual_case / "manual.md").write_text(
+        "# 测试软件 V1.0\n\n3. 启动服务\n   - 检查输出\n\n"
+        "     ```sh\n     oks recall hello\n     ```\n\n4. 打开控制台\n",
+        encoding="utf-8")
+    out = tmp_path / "numbered-manual"
+    result = copyright.build(manual_case / "copyright.json", out,
+                             purpose="preview", document="manual", no_preview=True)
+    assert result["state"] == "draft"
+    texts = [p.text for p in Document(out / "output.docx").paragraphs]
+    assert "3. 启动服务" in texts and "4. 打开控制台" in texts
+    assert "  - 检查输出" in texts and "oks recall hello" in texts
+
+
+def test_list_markers_do_not_invent_numbers_or_modify_commands(tmp_path):
+    blocks = markdown_blocks("1. First\n1. Second\n\n   ```sh\n   run --port 8080\n   ```\n", [], tmp_path, tmp_path)
+    assert [b["text"] for b in blocks] == ["1. First", "1. Second", "run --port 8080"]
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("1. - Nested\n", ["1.", "  - Nested"]),
+    ("3) Third\n4) Fourth\n", ["3) Third", "4) Fourth"]),
+    ("> 3. Third\n> 4. Fourth\n", ["3. Third", "4. Fourth"]),
+])
+def test_list_marker_variants(tmp_path, text, expected):
+    assert [b["text"] for b in markdown_blocks(text, [], tmp_path, tmp_path)] == expected
+
+
+@pytest.mark.parametrize("html", [
+    "<table><tr><td>Critical requirement</td></tr></table>",
+    "Press <kbd>Enter</kbd> to continue.",
+    "| Action | Result |\n| --- | --- |\n| Run | <b>Required</b> |",
+])
+def test_unsupported_manual_html_fails_before_word_output(manual_case, tmp_path, html):
+    (manual_case / "manual.md").write_text("# 测试软件 V1.0\n\n" + html + "\n", encoding="utf-8")
+    out = tmp_path / "html-manual"
+    with pytest.raises(ValueError, match="Raw HTML.*line.*Markdown"):
+        copyright.build(manual_case / "copyright.json", out,
+                        purpose="preview", document="manual", no_preview=True)
+    assert not (out / "output.docx").exists()
 
 
 def test_workflow_selection_uses_same_files_and_rejects_changed_source(manual_case):

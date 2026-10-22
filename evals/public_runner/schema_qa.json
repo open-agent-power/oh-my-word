@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "required": ["answer", "evidence", "limitations"],
+  "properties": {
+    "answer": {"type": "string"},
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["claim", "material_path", "quote"],
+        "properties": {
+          "claim": {"type": "string"},
+          "material_path": {"type": "string"},
+          "quote": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "limitations": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

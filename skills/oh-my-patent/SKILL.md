@@ -16,6 +16,7 @@ description: 中国专利申请的通用总览与编排入口。识别申请类�
 - 直接进入子 Skill 时先建立本入口的共用流程；已建立则直接继续，避免来回路由。
 - 起草使用 [通用撰写模板](references/general-drafting-template.md)。准备积累已有专利或领域经验时才读 [资料增强规则](references/domain-corpus.md)；扩展新领域时读 [子 Skill 契约](references/domain-skill-contract.md)。
 - 当前领域子 Skill 是可读的流程模块，尚无跨领域生成质量盲测证据；加载资料不会自动改变模型权重。
+- 起草时按[固定知识索引](../word-document/references/knowledge.md)读取已配置或指定的规则/技术参考。`template --knowledge INDEX` 保存实际规则命中；参考专利另按技术问题检索，不将其作为本案事实或查新覆盖保证。
 
 ## 必走链路
 

@@ -6,16 +6,20 @@ This module is an independent implementation; no OfficeCLI executor is bundled.
 from pathlib import Path
 import json
 import hashlib
+import shutil
 from uuid import uuid4
 
 from . import copyright
 from .common import digest, inside, now, read_json, sha256, write_json
 
 
-def prepare(source_root, output, *, name="", version=""):
+def prepare(source_root, output, *, name="", version="", knowledge=None):
     root, output = Path(source_root).resolve(), Path(output).resolve()
     if output.exists() or output.is_relative_to(root):
         raise ValueError("prepare needs a fresh output outside the source tree")
+    if knowledge:
+        from .knowledge import verify_index
+        verify_index(knowledge)
     manifest = copyright.scan_sources(root)
     output.mkdir(parents=True)
     write_json(output / "source-manifest.json", manifest)
@@ -49,6 +53,11 @@ def prepare(source_root, output, *, name="", version=""):
     for stage, arguments in stages:
         if run_stage(stage, arguments, quiet=True):
             raise ValueError(f"Fokkyp {stage} stage failed; inspect {workflow}")
+    if knowledge:
+        from .knowledge_context import domain_context, binding_for
+        domain_context(knowledge, "copyright", output / "knowledge")
+        draft["knowledge_context"] = binding_for(output / "knowledge", output)
+        write_json(output / "copyright.json", draft)
     return {"state": "scaffold-not-deliverable", "path": str(output), "candidates": len(manifest["files"])}
 
 
@@ -144,6 +153,10 @@ def package(path, output, *, draft=False, soffice=None, pdftoppm=None, no_previe
     write_json(audit / "validation.json", validation)
     write_json(audit / "source-manifest.json", checked["source_manifest"])
     write_json(audit / "materials.json", materials)
+    if "knowledge_context" in value:
+        from .knowledge_context import validate_binding
+        context, _ = validate_binding(value["knowledge_context"], path.parent)
+        shutil.copytree(context, audit / "knowledge")
     deliveries = {}
     for name in ("source", "manual"):
         result = copyright.build(path, output / name, soffice=soffice, pdftoppm=pdftoppm,
@@ -158,6 +171,7 @@ def package(path, output, *, draft=False, soffice=None, pdftoppm=None, no_previe
         attachments = [inside(path.parent, s["path"]) for s in value["screenshots"]]
         if manifest_file:
             attachments.append(manifest_file)
+        attachments.extend(Path(p) for p in copyright._knowledge_materials(value, path.parent))
         changed |= any(result["inputs"].get(f"audit/business-attachment-{i}{p.suffix}") != materials[str(p)] for i, p in enumerate(attachments))
         if bound != input_hash or changed:
             write_json(output / "manifest.json", {"state": "failed", "reason": "Child input differs from the package validation snapshot"})
@@ -187,7 +201,7 @@ def package(path, output, *, draft=False, soffice=None, pdftoppm=None, no_previe
     manifest = {"schema_version": 1, "created_at": now(), "purpose": purpose,
         "state": "draft" if draft or no_preview else "awaiting-review", "ready_for_submission": False,
         "input_sha256": hashlib.sha256(raw).hexdigest(), "deliveries": deliveries,
-        "inputs": {p.relative_to(output).as_posix(): sha256(p) for p in audit.iterdir()}, "outputs": outputs,
+        "inputs": {p.relative_to(output).as_posix(): sha256(p) for p in audit.rglob("*") if p.is_file()}, "outputs": outputs,
         "note": "Registration preparation only; each child delivery has an independent audit and page review."}
     manifest["package_id"] = digest(manifest)
     write_json(output / "manifest.json", manifest)

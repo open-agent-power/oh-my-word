@@ -12,8 +12,22 @@ def markdown_blocks(text, attachments, source_root, case):
     declared = {inside(source_root, item["path"]): item for item in attachments}
     tokens = MarkdownIt("commonmark").enable("table").parse(text)
     blocks, index = [], 0
+    list_items = []
+
+    # Reject unsupported markup before copying any image or projecting content.
+    for token in tokens:
+        if token.type == "html_block" or any(c.type == "html_inline" for c in token.children or []):
+            line = token.map[0] + 1 if token.map else "unknown"
+            raise ValueError(f"Raw HTML in manual at line {line} is not supported; use Markdown paragraphs/tables/images")
 
     def add(kind, **fields):
+        if list_items and list_items[-1]["pending"]:
+            item = list_items[-1]
+            item["pending"] = False
+            if kind == "paragraph" and not fields.get("monospace"):
+                fields["text"] = item["marker"] + (" " + fields["text"] if fields["text"] else "")
+            else:
+                add("paragraph", text=item["marker"])
         blocks.append({"id": f"manual-{len(blocks)}", "type": kind, "intent": "fact",
                        "claim_ids": ["manual-transcription"], **fields})
 
@@ -25,7 +39,17 @@ def markdown_blocks(text, attachments, source_root, case):
 
     while index < len(tokens):
         token = tokens[index]
-        if token.type == "heading_open":
+        if token.type == "list_item_open":
+            # Keep the literal marker, including start offsets and repeated "1.".
+            # Generated counters would introduce numbers absent from the evidence.
+            if list_items and list_items[-1]["pending"]:
+                add("paragraph", text="")
+            list_items.append({"marker": "  " * len(list_items) + token.info + token.markup, "pending": True})
+        elif token.type == "list_item_close":
+            if list_items[-1]["pending"]:
+                add("paragraph", text="")
+            list_items.pop()
+        elif token.type == "heading_open":
             add("paragraph", text=plain(tokens[index + 1]), heading_level=min(3, int(token.tag[1:])))
             index += 3
             continue

@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "patent_type": "invention",
+  "draft_sha256": "776c1ba80f173c365e654594d9d77c50d7fdc30d8efd4e8540e8ad824e72565b",
+  "evidence_sha256": "09c019605c247c5a28fb9d9630d102754af7d1ef1817a301da9ec20f141d44b8",
+  "reviewer": "Codex示例内容核对 非专利代理查新",
+  "reviewed_at": "2026-09-30",
+  "checks": [
+    {
+      "id": "fact_boundary",
+      "status": "pass",
+      "evidence": "示例全文技术方案与technical.txt一致：温度采集、存储、失败保留重试。未增加阈值、公式或实验。"
+    },
+    {
+      "id": "claim_support",
+      "status": "pass",
+      "evidence": "权1拆成采集和存储两个操作，技术方案分别逐字支持，实施方式说明数字传感器连接和写入。"
+    },
+    {
+      "id": "parameter_consistency",
+      "status": "not_applicable",
+      "evidence": "没有数值参数或共用公式。"
+    },
+    {
+      "id": "optional_steps",
+      "status": "pass",
+      "evidence": "权1的获取和存储均为必选；失败处理只在实施方式细化存储，不宣称其为独权必要特征。"
+    },
+    {
+      "id": "quantity_constraints",
+      "status": "not_applicable",
+      "evidence": "没有集合大小或采样数量约束。"
+    },
+    {
+      "id": "dimensions",
+      "status": "not_applicable",
+      "evidence": "只有温度数值，未给归一化、比值或物理公式。"
+    },
+    {
+      "id": "enabled_states",
+      "status": "not_applicable",
+      "evidence": "没有多配置开关或禁用机制。"
+    },
+    {
+      "id": "experiment_provenance",
+      "status": "not_applicable",
+      "evidence": "功能演示不报告实验指标，不以实验数据证明技术优势。"
+    },
+    {
+      "id": "sufficiency",
+      "status": "pass",
+      "evidence": "示例明确数字温度传感器、采集器、存储器连接及读写和失败处理；仅测试简单采集文书路径。"
+    },
+    {
+      "id": "prior_art",
+      "status": "not_applicable",
+      "evidence": "此为人工构造CLI演示，不是拟申请案件；未查新，不能据此提交或推断新颖性/创造性。"
+    },
+    {
+      "id": "patent_type",
+      "status": "pass",
+      "evidence": "方法示例按发明类型演示，未使用实用新型类型保护方法。"
+    },
+    {
+      "id": "ai_disclosure",
+      "status": "not_applicable",
+      "evidence": "示例技术方案不涉及AI模型或算法训练。"
+    },
+    {
+      "id": "ethics",
+      "status": "pass",
+      "evidence": "示例为温度传感器采集存储，材料中未涉及个人数据或伤害性决策。"
+    }
+  ],
+  "claim_support": [
+    {
+      "claim": 1,
+      "features": [
+        {
+          "text": "获取传感器温度值",
+          "description_quote": "获取传感器温度值",
+          "fact_ids": [
+            "F1"
+          ]
+        },
+        {
+          "text": "将所述温度值存储到存储器",
+          "description_quote": "将所述温度值存储到存储器",
+          "fact_ids": [
+            "F2"
+          ]
+        }
+      ]
+    }
+  ],
+  "design_support": [],
+  "findings": [],
+  "accepted_warnings": []
+}

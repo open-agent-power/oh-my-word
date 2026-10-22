@@ -26,6 +26,7 @@ description: 依据可核查的项目材料撰写和审阅技术报告、设计�
 - 用户手册读 [操作步骤](references/user-manual.md)。
 - 运维手册读 [运行与恢复](references/operations-manual.md)。
 - 摄入、起草、校验和交付按 [工具流程](references/workflow.md)。
+  正文确定后需限制排版改写时，使用其中可选的“锁定内容后排版”入口。
 - 数值、参数和运行结论按 [证据契约](../word-document/references/evidence.md)。
 - 中文表达遵循 [共用写作规则](../../shared/references/chinese-writing.md)。
 
