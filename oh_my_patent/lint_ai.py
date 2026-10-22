@@ -99,6 +99,35 @@ def _format_hits(hits: list[str], limit: int = 4) -> str:
     return f"{shown} 等" if len(hits) > limit else shown
 
 
+_AI_TERMS = "|".join(re.escape(k) for k in sorted(AI_CORE_KEYWORDS, key=len, reverse=True))
+_DIRECT_NEGATION = re.compile(
+    r"(?:不(?:使用|采用|训练|构建)|未(?:使用|采用)|没有(?:使用|采用)|"
+    r"(?:无需|无须)(?:重新|额外|再)?(?:训练|构建|使用|采用)?)"
+    r"(?:任何|额外的|一个|新的|该|所述)?(?:" + _AI_TERMS + r"|模型)"
+)
+_SCOPE_NEGATION = re.compile(r"不涉及|未涉及|没有涉及|不包含|不假设")
+_CLAUSE_BOUNDARY = re.compile(
+    r"[，,。；;！？!?\n]|但是|然而|而是|但|而|却|仍然|仍需|同时|随后|然后|即可|"
+    r"并(?=训练|构建|采用|调用|使用)"
+)
+
+
+def _affirmative_ai_text(text: str) -> str:
+    """Ignore narrowly explicit negation, retaining subsequent positive clauses.
+
+    This is a lexical heuristic, not a semantic/legal verdict. Do not use a
+    sentence-wide negative-word filter: e.g. '无需标注即可训练' still trains.
+    Enumeration punctuation (、) stays within an explicit exclusion's scope.
+    """
+    out = []
+    for clause in _CLAUSE_BOUNDARY.split(text):
+        scope = _SCOPE_NEGATION.search(clause)
+        if scope:
+            clause = clause[:scope.start()]
+        out.append(_DIRECT_NEGATION.sub("", clause))
+    return "\n".join(out)
+
+
 # --------------------------------------------------------------------------
 # 门槛一：充分公开
 # --------------------------------------------------------------------------
@@ -113,8 +142,8 @@ def check_ai_disclosure(draft: PatentDraft) -> list[Issue]:
     """
     issues: list[Issue] = []
 
-    claims_text = draft.claims_text()
-    description = draft.description_text()
+    claims_text = _affirmative_ai_text(draft.claims_text())
+    description = _affirmative_ai_text(draft.description_text())
 
     ai_in_claims = _hits(claims_text, AI_CORE_KEYWORDS)
     ai_in_description = _hits(description, AI_CORE_KEYWORDS)
@@ -150,7 +179,9 @@ def check_ai_disclosure(draft: PatentDraft) -> list[Issue]:
         # 说明书一个字都没写，后面的结构性检查无从谈起
         return issues
 
-    is_build_case = bool(_hits(description, _BUILD_SIGNALS))
+    # A pretrained model is not itself an assertion of training in this scheme.
+    build_description = description.replace("预训练", "预先获得")
+    is_build_case = bool(_hits(build_description, _BUILD_SIGNALS))
     is_apply_case = bool(_hits(description, _APPLY_SIGNALS))
 
     structure_hits = _hits(description, AI_STRUCTURE_KEYWORDS)
@@ -164,7 +195,7 @@ def check_ai_disclosure(draft: PatentDraft) -> list[Issue]:
                     Severity.ERROR,
                     "AI-002",
                     f"说明书涉及 AI 模型的构建或训练（出现「"
-                    f"{_format_hits(_hits(description, _BUILD_SIGNALS))}」），"
+                    f"{_format_hits(_hits(build_description, _BUILD_SIGNALS))}」），"
                     f"但未记载模型必要的模块、层级或者连接关系。",
                     "具体实施方式",
                     f"{_GUIDELINE}：涉及人工智能模型的构建或者训练，"
@@ -175,7 +206,7 @@ def check_ai_disclosure(draft: PatentDraft) -> list[Issue]:
             )
 
     # ---- AI-003：训练细节缺失 ----
-    if "训练" in description and not _hits(description, AI_TRAINING_DETAIL_KEYWORDS):
+    if "训练" in build_description and not _hits(description, AI_TRAINING_DETAIL_KEYWORDS):
         issues.append(
             Issue(
                 Severity.WARNING,

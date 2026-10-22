@@ -126,3 +126,9 @@
 查新和可专利客体判断仍为pending，保留1项P1 open。基准与重新复核后的final均因这些未完成条件退出2且没有生成文件；这验证了拦截，不是final通过。没有用force、填造权属或修改检查状态绕过。技术练习完成，真实专利专业质量未验收；下一次业务验证需要明确原创贡献及专业对比，公开代码练习不能填补此缺口，也不据此扩库。
 
 交付与证据位于仓库外 `../word-skills-reuse-trial/patent-writing-pilot/`：`delivery/patent-draft.docx`、`delivery/patent-draft.pdf`、`review-report.md`、`case-notes.md`、`TECH_FACTS.json`、`content-review.json`、`evidence/acceptance.json`、`evidence/reuse-verification.json`、`evidence/cost.json` 和 `patent-pilot-delivery.zip`。本轮仓库仅提交本节结论，不包含案件原件或生成文件。单案例未证明风格、去AI味、幻觉率或直接阅读相对RAG的普遍质量收益。
+
+## 已复现问题修复 第一轮（2026-10-22）
+
+AI公开检查现对明确排除范围与紧邻模型术语的否定表达做词法过滤，解决公开源码练习中“不假设额外的硬件结构、训练模型或网络服务”触发AI-002的问题。转折及后续正向训练单独检查；否定的模型结构不能用于证明结构已公开，说明书否定提及也不能支持权项中的正向AI特征。调用预训练模型不再仅因“预训练”被认定为本方案实施训练。
+
+这是有限词法修复，不承诺理解任意否定、背景或因果关系。保留原本的AI检查与final门禁；AI专项及final回归通过，原始失败稿复核不再产生AI专项诊断。后续继续处理CLI参数、字段限制依据、新案例、可用环境验证及授权远端同步，不增加知识平台。

@@ -87,6 +87,43 @@ class AiDisclosureTest(unittest.TestCase):
         )
         self.assertIn("AI-002", codes(draft, "AI-"))
 
+    def test_explicit_negation_does_not_create_an_ai_scheme(self):
+        for text in (
+            "调用函数的接口和参数来自公开源码，不假设额外的硬件结构、训练模型或网络服务。",
+            "本方案不涉及人工智能模型的构建或训练，仅按分隔符截断字符串。",
+            "本方法无需训练模型。按规则处理输入并输出字符串。",
+            "本方法不采用卷积神经网络。",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(codes(base(text), "AI-"), set())
+
+    def test_negation_cannot_hide_affirmative_training(self):
+        for text in (
+            "不涉及模型训练，但构建神经网络对图像进行分类。",
+            "本方案无需训练模型，而是构建神经网络。",
+            "不假设网络服务，并训练神经网络。",
+            "不使用标注数据训练神经网络。",
+            "无需人工标注即可训练神经网络。",
+            "不仅训练神经网络，还构建预测模型。",
+            "本方案不涉及传统模型。训练神经网络进行分类。",
+        ):
+            with self.subTest(text=text):
+                self.assertIn("AI-002", codes(base(text), "AI-"))
+
+    def test_negated_description_does_not_support_ai_claim(self):
+        draft = base("本方案不涉及神经网络。")
+        draft.claims[0].text += "采用神经网络。"
+        self.assertIn("AI-001", codes(draft, "AI-"))
+
+    def test_pretrained_inference_is_not_model_training(self):
+        draft = base("无需训练模型，而是调用预训练神经网络进行推理，输入图像并输出类别。")
+        self.assertNotIn("AI-002", codes(draft, "AI-"))
+        self.assertNotIn("AI-003", codes(draft, "AI-"))
+
+    def test_negated_structure_is_not_positive_disclosure(self):
+        draft = base("训练神经网络进行分类，但不包含卷积层或池化层。")
+        self.assertIn("AI-002", codes(draft, "AI-"))
+
     def test_structure_present_clears_ai_002(self):
         """写明了层级与连接关系后，AI-002 应当消失。"""
         draft = base(
