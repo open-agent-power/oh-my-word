@@ -1,12 +1,23 @@
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from evals.content_support import probe
 
 
 class ProbePreparationTests(unittest.TestCase):
+    def setUp(self):
+        runtime = tempfile.TemporaryDirectory()
+        self.addCleanup(runtime.cleanup)
+        cli = Path(runtime.name) / "codex-fixture"
+        cli.write_bytes(b"synthetic-cli-identity-not-executable")
+        for stub in (patch.object(probe, "CODEX", cli),
+                     patch.object(probe, "cli_version", return_value="synthetic-test-runtime")):
+            stub.start()
+            self.addCleanup(stub.stop)
+
     def test_prepare_freezes_four_cases_and_sixteen_randomized_jobs(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -46,6 +57,33 @@ class ProbePreparationTests(unittest.TestCase):
             prompt.write_text(prompt.read_text(encoding="utf-8") + " changed", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "frozen input changed"):
                 probe.verify(prepared)
+
+    def test_verification_rejects_changed_cli_identity(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            corpus = root / "corpus.jsonl"
+            corpus.write_text(json.dumps({"doc_id": 45638119, "title": "fixture", "abstract": ["a", "b", "c", "d", "e", "f"]}) + "\n", encoding="utf-8")
+            prepared = probe.prepare(root / "out", corpus, "test-run")
+            probe.CODEX.write_bytes(b"changed synthetic CLI")
+            with self.assertRaisesRegex(ValueError, "CLI binary changed"):
+                probe.verify(prepared)
+
+    def test_missing_cli_fails_before_creating_run(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            corpus = root / "corpus.jsonl"
+            corpus.write_text("", encoding="utf-8")
+            with patch.object(probe, "CODEX", root / "missing"):
+                with self.assertRaisesRegex(FileNotFoundError, "WORD_SKILLS_CODEX"):
+                    probe.prepare(root / "out", corpus, "test-run")
+            self.assertFalse((root / "out").exists())
+
+
+def test_cli_version_uses_portable_argument_array():
+    import sys
+    # Use the current Python as a harmless --version executable, with no shell.
+    with patch.object(probe, "CODEX", Path(sys.executable)):
+        assert "Python" in probe.cli_version()
 
 
 if __name__ == "__main__":

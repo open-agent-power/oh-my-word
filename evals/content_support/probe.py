@@ -63,7 +63,7 @@ def sha(path: Path) -> str:
 
 
 def cli_version() -> str:
-    completed = subprocess.run(["cmd.exe", "/d", "/c", f"{CODEX} --version"],
+    completed = subprocess.run([str(CODEX), "--version"],
                                capture_output=True, timeout=30, check=False)
     output = (completed.stdout + completed.stderr).decode("utf-8", errors="replace").strip()
     if completed.returncode != 0 or not output:
@@ -86,6 +86,8 @@ def prepare(data_root: Path, corpus: Path, run_id: str) -> Path:
     data_root, corpus = data_root.resolve(), corpus.resolve()
     if not corpus.is_file():
         raise FileNotFoundError(f"Public candidate corpus not found: {corpus}")
+    if not CODEX.is_file():
+        raise FileNotFoundError("Codex CLI not found; set WORD_SKILLS_CODEX to its executable or add codex to PATH")
     target = data_root / run_id
     if target.exists():
         raise FileExistsError(target)

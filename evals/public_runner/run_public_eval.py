@@ -20,8 +20,8 @@ from urllib.request import getproxies
 MODEL = "gpt-6-luna"
 CONDITIONS = ("plain", "current")
 REPO = Path(__file__).resolve().parents[2]
-CODEX = Path(r"D:\Kaifa-tool\Runtime\Volta\bin\codex.cmd")
-DEFAULT_RUNS = Path(r"D:\XiangMuLuoDi\Development\word-skills-public-eval\runs")
+CODEX = Path(os.environ.get("WORD_SKILLS_CODEX") or shutil.which("codex") or "codex").resolve()
+DEFAULT_RUNS = Path(os.environ.get("WORD_SKILLS_EVAL_RUNS") or REPO / "eval-runs").resolve()
 TASK_KEYS = {"id", "kind", "split", "request", "materials", "metadata"}
 MATERIAL_KEYS = {"path", "sha256", "source_id"}
 COMMON = """Use the complete supplied source text as context. Ground factual claims in the source materials, distinguish evidence from inference, and state material gaps. Do not claim verification or review that you did not perform. Return one valid JSON object using a renderer-neutral structure. For factual-qa, include answer (string), evidence (array of objects with claim, material_path, and quote strings), and limitations (array of strings). For writing, include draft with title and sections (array); each section has title and blocks. A paragraph block has type=paragraph and text. A table block has type=table, headers (array of strings), and rows (array of string arrays). Also include evidence (array of objects with claim, material_path, and quote strings) and limitations (array of strings). For general factual QA, answer directly; do not create a technical report. For writing tasks, follow the requested document purpose and audience. Do not invent project-specific measurements or conclusions. Additional Skill-specific fields or constraints may be included when needed, but keep the result editable and renderer-neutral."""

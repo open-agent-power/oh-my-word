@@ -20,6 +20,8 @@
 
 第1轮本地证据：535项测试、204个子测试通过，无skip/xfail/xpass；两套结构检查通过。actionlint 1.7.12核对CI配置通过，所用Windows工具压缩包与官方发布SHA256一致。独立新建Python 3.12环境仅安装所构建wheel及其解析依赖，仓库外导入与两个console script、技术文档、专利骨架和软著prepare均实际通过。真实LibreOffice/Poppler生成1页合成样稿，页图已看过，标题/正文黑色，无缺字、遮挡或越界；未填写审阅，状态保持awaiting-review，finalize退出2。无预览版本保持draft，finalize同样拒绝。报告记录全部解析依赖版本，不能把它写成跨平台传递依赖锁定。证据位于外部 `../word-skills-reuse-trial/reproducibility-20261023/`；远端矩阵任务须在提交后实际运行，当前不记作已通过。
 
+首次远端运行 `39976191432` 的Linux预览实际通过，三组回归均失败，原始失败保留：Linux各2项失败，Windows16项失败。其一为离线probe测试依赖开发机D盘的真实Codex安装，现改为合成CLI身份/版本fixture；真实执行改用显式 `WORD_SKILLS_CODEX` 或PATH发现，版本查询不用cmd字符串，运行输出默认放忽略目录而不是开发机绝对路径。25项probe及public-control专项通过，包括真实Python版本命令、CLI变更失效和缺CLI在建目录前拒绝。Windows另有14项软著临时目录短路径/规范路径不一致失败，保持独立修复轮，不降低测试或跳过Windows。
+
 ## 目标与边界
 
 总目标：以真实项目材料和现有 Skills，低成本完成可核验、可修改的软著材料与专利初稿。资料整理应随着具体写作发生，不能成为先建库再交付的长期工程。
