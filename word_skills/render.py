@@ -9,6 +9,7 @@ from zipfile import ZipFile
 from docx import Document
 from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
 from docx.enum.text import WD_TAB_ALIGNMENT
+from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Mm, Pt, RGBColor
@@ -68,6 +69,43 @@ def font(style, name, size, bold=False):
     rfonts.set(qn("w:hint"), "eastAsia")
 
 
+def _black_default_text(doc, *, include_runs=True):
+    """Fix generated text colors, including linked styles; preserve other formatting.
+
+    Only call on our default documents, never on a supplied customer template.
+    """
+    def black(rpr):
+        for old in list(rpr.findall(qn("w:color"))):
+            rpr.remove(old)
+        # Use python-docx's schema-ordered insertion, before font-size elements.
+        color = rpr.get_or_add_color()
+        color.set(qn("w:val"), "000000")
+
+    for style in doc.styles:
+        if style.type in {WD_STYLE_TYPE.PARAGRAPH, WD_STYLE_TYPE.CHARACTER}:
+            black(style.element.get_or_add_rPr())
+    defaults = doc.styles.element.find(qn("w:docDefaults"))
+    if defaults is None:
+        defaults = OxmlElement("w:docDefaults")
+        doc.styles.element.insert(0, defaults)
+    default_rpr = defaults.find(qn("w:rPrDefault"))
+    if default_rpr is None:
+        default_rpr = OxmlElement("w:rPrDefault")
+        defaults.insert(0, default_rpr)
+    rpr = default_rpr.find(qn("w:rPr"))
+    if rpr is None:
+        rpr = OxmlElement("w:rPr")
+        default_rpr.append(rpr)
+    black(rpr)
+    if include_runs:
+        stories = [doc.element]
+        stories += [rel.target_part.element for rel in doc.part.rels.values()
+                    if not rel.is_external and str(rel.target_part.partname).startswith(("/word/header", "/word/footer"))]
+        for story in stories:
+            for run in story.iter(qn("w:r")):
+                black(run.get_or_add_rPr())
+
+
 def default_document():
     doc = Document()
     section = doc.sections[0]
@@ -94,6 +132,7 @@ def default_document():
     field = OxmlElement("w:fldSimple")
     field.set(qn("w:instr"), "PAGE")
     footer._p.append(field)
+    _black_default_text(doc, include_runs=False)
     return doc
 
 
@@ -260,6 +299,8 @@ def render(draft, output, template=None, template_mode="style", *, asset_root=No
         if template:
             clear_body(doc)  # Explicit --template-mode style: reference body is not an editable input document.
         append_content(doc, draft, asset_root=asset_root)
+        if not template:
+            _black_default_text(doc)
         doc.core_properties.title = draft["title"]
         doc.core_properties.author = ""
         doc.save(output)
