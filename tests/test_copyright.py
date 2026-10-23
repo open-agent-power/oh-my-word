@@ -58,6 +58,27 @@ def test_exact_extraction_and_unreviewed_word(prepared, tmp_path):
     assert (tmp_path / "delivery/output.docx").is_file()
 
 
+def test_noncanonical_temporary_path_binds_to_ingested_source(prepared, tmp_path, monkeypatch):
+    from contextlib import contextmanager
+    from pathlib import Path
+    import tempfile
+
+    original = tempfile.TemporaryDirectory
+
+    @contextmanager
+    def aliased_directory(*args, **kwargs):
+        with original(*args, **kwargs) as name:
+            # Like Windows 8.3 names, this spells the same directory differently
+            # from ingest's resolved original_path. No symlink permission needed.
+            (Path(name) / "path-alias").mkdir()
+            yield str(Path(name) / "path-alias" / "..")
+
+    monkeypatch.setattr(tempfile, "TemporaryDirectory", aliased_directory)
+    result = build(prepared[2], tmp_path / "aliased-delivery", no_preview=True)
+    assert result["state"] == "draft"
+    assert (tmp_path / "aliased-delivery/output.docx").is_file()
+
+
 @pytest.mark.parametrize("mutation,code", [
     (lambda p: p["rights_holder"].update(ownership_confirmed=False), "RIGHTS_CONFIRMATION"),
     (lambda p: p["source_manifest"]["files"][0].update(line_count=999), "SOURCE_LINE_COUNT"),

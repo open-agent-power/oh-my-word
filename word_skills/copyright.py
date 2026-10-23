@@ -556,7 +556,8 @@ def build(path, out, *, source_root=None, soffice=None, pdftoppm=None, no_previe
     manual_path = inside(case_path.parent, value["manual"]["path"])
     manual_hash = material_hashes[str(manual_path)]
     with TemporaryDirectory(prefix="word-copyright-") as directory:
-        temporary = Path(directory)
+        # ingest resolves original_path, including Windows 8.3 directory aliases.
+        temporary = Path(directory).resolve()
         case = temporary / "case"
         input_snapshot = temporary / "business-input.json"
         input_snapshot.write_bytes(source_bytes)
