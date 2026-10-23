@@ -1,0 +1,101 @@
+name: Document pipeline checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: '3.10'
+          - os: ubuntu-latest
+            python: '3.12'
+          - os: windows-latest
+            python: '3.12'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements-tested.txt
+      - name: Install full test dependencies
+        run: python -m pip install ".[dev,ingest,templates]" build beautifulsoup4
+      - run: python -m pip check
+      - run: python tools/check_word_skills.py
+      - run: python tools/check_skills.py
+      - name: Run complete deterministic regression without skips
+        run: python tools/check_full_dependencies.py
+      - name: Record resolved dependency versions
+        run: python -m pip freeze --all > outputs/acceptance/resolved-requirements.txt
+      - run: python -m build --wheel
+      - name: Check isolated wheel installation outside checkout
+        shell: bash
+        run: |
+          python -m venv "$RUNNER_TEMP/wheel-env"
+          if [ "$RUNNER_OS" = Windows ]; then
+            installed_python="$RUNNER_TEMP/wheel-env/Scripts/python.exe"
+          else
+            installed_python="$RUNNER_TEMP/wheel-env/bin/python"
+          fi
+          "$installed_python" -m pip install dist/*.whl
+          "$installed_python" -I tools/check_installed_delivery.py --out "$RUNNER_TEMP/installed-smoke"
+      - name: Retain acceptance reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: checks-${{ matrix.os }}-${{ matrix.python }}
+          path: |
+            outputs/acceptance/full-dependencies.json
+            outputs/acceptance/resolved-requirements.txt
+            ${{ runner.temp }}/installed-smoke/installed-delivery.json
+
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install conversion tools and Chinese fallback fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libreoffice-writer poppler-utils fonts-noto-cjk
+      - run: python -m pip install build
+      - run: python -m build --wheel
+      - name: Build installed fixture with actual PDF and page images
+        run: |
+          python -m venv "$RUNNER_TEMP/wheel-env"
+          "$RUNNER_TEMP/wheel-env/bin/python" -m pip install dist/*.whl
+          "$RUNNER_TEMP/wheel-env/bin/python" -I tools/check_installed_delivery.py --out "$RUNNER_TEMP/preview-smoke" --preview
+      - name: Retain synthetic preview for inspection
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: synthetic-preview
+          path: ${{ runner.temp }}/preview-smoke

@@ -88,7 +88,7 @@ def main() -> int:
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
     summary = TestSummary()
-    exit_code = pytest.main(["tests", "-q"], plugins=[summary])
+    exit_code = pytest.main(["tests", "evals", "-q"], plugins=[summary])
     tests = {
         "collected": summary.collected,
         "exit_code": int(exit_code),

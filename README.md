@@ -29,6 +29,27 @@ python tools/check_word_skills.py
 
 `requirements-tested.txt` 记录验收使用的直接依赖版本，可在新环境用 `python -m pip install -r requirements-tested.txt` 安装后，再执行 `python -m pip install -e . --no-deps`。它不是传递依赖锁文件。独立 wheel 包含 Python 工具、Schema、注册表快照及所需上游脚本；完整 Skill 文案仍需本仓库。字体及 PDF 预览工具由使用环境显式配置。
 
+### 安装后独立验收
+
+完整 Agent Skill 使用本仓库，wheel 仅提供 Python 工具和所需运行资源。先在仓库内构建 wheel，再将它装入仓库外的新虚拟环境，避免误用开发目录中的代码：
+
+```powershell
+python -m pip install build
+python -m build --wheel
+# 使用仓库外尚不存在的目录，示例以 Windows PowerShell 为例。
+$checkRoot = Join-Path $env:TEMP ('word-skills-check-' + [guid]::NewGuid())
+python -m venv "$checkRoot/venv"
+$checkPython = "$checkRoot/venv/Scripts/python.exe"
+Get-ChildItem dist/word_skills-*.whl | ForEach-Object { & $checkPython -m pip install $_.FullName }
+& $checkPython -I tools/check_installed_delivery.py --out "$checkRoot/smoke"
+# 有转换工具时另用新目录要求真实 PDF/页图，不接受跳过预览。
+& $checkPython -I tools/check_installed_delivery.py --out "$checkRoot/preview" --preview --soffice SOFFICE_EXE --pdftoppm PDFTOPPM_EXE
+```
+
+Linux/macOS的环境解释器位于 `venv/bin/python`；其他参数相同。验收覆盖仓库外导入、两个安装命令、路由、专利骨架、来源摄入、技术文档制作和软著prepare。输入明确标记为合成材料；不调用模型或知识服务，不填写审阅通过记录，未审阅定稿必须失败。结果保存在输出目录的 `installed-delivery.json`，原始命令和实际退出码可回查。
+
+GitHub Actions配置执行Linux/Python 3.10、3.12与Windows/Python 3.12的结构检查、完整确定性回归、依赖检查及隔离wheel验收；另一个Linux任务实际生成PDF/页图。CI使用公开合成材料，不上传本机案件。配置存在、某次CI通过、人工看图和写作质量分别验收，CI不自动把交付升级为reviewed。字体替代与Word/WPS兼容仍须目标环境实测。
+
 ## 总入口与路由
 
 ```powershell
@@ -118,7 +139,7 @@ python tools/check_full_dependencies.py
 
 `check_full_dependencies.py` 使用同一解释器执行 pytest 全部测试并记录依赖版本、测试数和跳过项；缺依赖、失败、skip、xfail 或 xpass 均使验收失败。报告保存在本地 `outputs/acceptance/`。
 
-默认 `pytest` 仅收集 `tests/` 和 `evals/`，避免 `outputs/` 中摄入的外部项目测试被误收集。完整依赖检查器负责 `tests/` 的依赖与执行记录，默认 pytest 另外覆盖实验工具的确定性测试；这些测试不会启动模型跑批或 RAGFlow 部署。
+默认 `pytest` 和完整依赖检查器均只收集 `tests/` 和 `evals/`，避免 `outputs/` 中摄入的外部项目测试被误收集。完整依赖检查器同时记录依赖与测试执行结果，拒绝skip/xfail/xpass；公共采集工具的测试还需安装 `beautifulsoup4`。这些测试不会启动模型跑批或 RAGFlow 部署。
 
 ## 许可与来源
 
