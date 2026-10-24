@@ -13,7 +13,7 @@ import yaml
 from oh_my_patent.casework import compare_revisions, read_revision, validate_case, validate_corpus, validate_needs
 from oh_my_patent.lab_common import digest, relative_file, write_json
 from oh_my_patent.skill_registry import load_registry
-from oh_my_patent.skill_eval import ExecutionInterrupted, execution_env, prepare_suite, run_suite, summarize, verify_task
+from oh_my_patent.skill_eval import ExecutionInterrupted, execution_env, generic_entrypoint, prepare_suite, run_suite, summarize, verify_task
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -47,6 +47,35 @@ class ProxyEnvTests(unittest.TestCase):
              patch('oh_my_patent.skill_eval.os.name', 'posix'), patch('oh_my_patent.skill_eval.getproxies') as proxies:
             self.assertEqual(execution_env(), {'KEEP': 'value'})
             proxies.assert_not_called()
+
+
+class GenericEntrypointTests(unittest.TestCase):
+    def test_legacy_and_optional_boundaries_preserve_shared_content(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root/'evals').mkdir()
+            (root/'evals/generic-entrypoint.md').write_text('GENERIC\n', encoding='utf-8')
+            for heading in ('## 必走链路', '## 可选工具交付链路'):
+                with self.subTest(heading=heading):
+                    (root/'SKILL.md').write_text(
+                        f'BEFORE\n## 总览与领域路由\nDOMAIN\n{heading}\nAFTER\n', encoding='utf-8')
+                    self.assertEqual(generic_entrypoint(root), f'BEFORE\nGENERIC\n\n{heading}\nAFTER\n')
+
+    def test_invalid_or_ambiguous_boundaries_are_rejected(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            for text in (
+                '## 总览与领域路由\nNO TOOL BOUNDARY\n',
+                '## 总览与领域路由\n## 必走链路\n## 可选工具交付链路\n',
+                '## 总览与领域路由\n## 必走链路\n## 必走链路\n',
+                '## 总览与领域路由\n## 总览与领域路由\n## 必走链路\n',
+                '## 必走链路\n## 总览与领域路由\n',
+                '## 总览与领域路由\nquoted ## 必走链路\n',
+            ):
+                with self.subTest(text=text):
+                    (root/'SKILL.md').write_text(text, encoding='utf-8')
+                    with self.assertRaisesRegex(ValueError, 'routing boundaries'):
+                        generic_entrypoint(root)
 
 
 class LabTests(unittest.TestCase):
@@ -231,7 +260,8 @@ class LabTests(unittest.TestCase):
         source = (self.root/'skills/oh-my-patent/SKILL.md').read_text(encoding='utf-8')
         for task in suite['tasks']:
             entry = (Path(task['workspace'])/'bundle/skills/oh-my-patent/SKILL.md').read_text(encoding='utf-8')
-            self.assertEqual(entry.split('## 必走链路', 1)[1], source.split('## 必走链路', 1)[1])
+            self.assertEqual(entry.split('## 可选工具交付链路', 1)[1], source.split('## 可选工具交付链路', 1)[1])
+            self.assertTrue(entry.startswith(source.split('## 总览与领域路由', 1)[0]))
             if task['mode'] == 'generic':
                 self.assertNotIn('先读 [领域目录]', entry)
 

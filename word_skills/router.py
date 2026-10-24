@@ -50,6 +50,8 @@ def route(request: str, root: str | Path | None = None) -> dict:
             "skill_status": row["status"],
             "mode": mode,
             "mode_scope": mode_scope.get(mode),
+            "dependencies": row.get("dependencies", []),
+            "optional_dependencies": row.get("optional_dependencies", []),
             "matched_terms": hits,
             "rationale": f"请求包含与 {name} 责任范围相符的词语。",
         })
@@ -60,7 +62,7 @@ def route(request: str, root: str | Path | None = None) -> dict:
     else:
         selected = matches[0]["skill"] if len(matches) == 1 else "word-skills"
         needs_clarification = any(m["status"] != "implemented" for m in matches)
-        reason = "请求涉及尚未实现的能力；需明确说明当前支持范围。" if needs_clarification else "已匹配能力；多项匹配时由总入口按各自职责组合。"
+        reason = "请求涉及尚未实现的能力；需明确说明当前支持范围。" if needs_clarification else "已匹配能力；多项匹配时按职责组合。路由未执行写作、工具或验收。"
     return {
         "schema_version": 1,
         "request": request,
@@ -73,6 +75,8 @@ def route(request: str, root: str | Path | None = None) -> dict:
 
 def list_skills(root: str | Path | None = None) -> list[dict]:
     return [
-        {key: row[key] for key in ("name", "path", "kind", "status", "modes", "dependencies", "mode_scope") if key in row}
+        {**{key: row[key] for key in ("name", "path", "kind", "status", "modes", "mode_scope") if key in row},
+         "dependencies": row.get("dependencies", []),
+         "optional_dependencies": row.get("optional_dependencies", [])}
         for row in load_registry(root)
     ]

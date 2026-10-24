@@ -2,6 +2,8 @@
 
 `word-skills` 是面向中文领域写作的 Skills monorepo。技术报告、软著材料和专利初稿以写作方法、规范、案例和审阅标准为核心；项目分析、程序校验、Word/PDF 制作及 RAG 按需选用。
 
+产品名统一为 `word-skills`，仓库名及兼容的 `oh-my-patent` 命令保留。材料、事实、文稿、交付和完成状态的含义见 [共用契约](docs/06-contracts-and-states.md)。
+
 当前实现包括：
 
 - `word-skills`：总入口、技能注册表和确定性路由；
@@ -71,6 +73,8 @@ python -m word_skills route "请准备项目申报书" --json
 ```
 
 路由结果只声明登记状态和模式范围；`focused` 表示当前重点能力，`baseline` 表示已有结构化契约但仍需项目级验证。路由器不会自动写正文，也不保证用户材料已经齐备。
+
+`skills list` 和 `route --json` 区分 `dependencies`（必需 Skill）与 `optional_dependencies`（按任务选用），不执行安装或环境检查。技术文档和软著的 Word 制作依赖为可选，项目申报仍保留现有制作依赖。文本路由显示 `matched`，表示已选入口；`implemented` 不表示本次写作或验收完成。
 
 ## 技术文档与 Word 交付
 

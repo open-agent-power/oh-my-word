@@ -64,10 +64,11 @@ def generic_entrypoint(root):
     if not entry.is_file():
         entry = root/'SKILL.md'
     text = entry.read_text(encoding='utf-8')
-    start, end = '## 总览与领域路由', '## 必走链路'
-    if text.count(start) != 1 or text.count(end) != 1 or text.index(start) >= text.index(end):
+    starts = list(re.finditer(r'(?m)^## 总览与领域路由[ \t]*$', text))
+    ends = list(re.finditer(r'(?m)^## (?:可选工具交付链路|必走链路)[ \t]*$', text))
+    if len(starts) != 1 or len(ends) != 1 or starts[0].start() >= ends[0].start():
         raise ValueError('entrypoint routing boundaries changed; update baseline explicitly')
-    return text[:text.index(start)] + (Path(root)/'evals/generic-entrypoint.md').read_text(encoding='utf-8').rstrip() + '\n\n' + text[text.index(end):]
+    return text[:starts[0].start()] + (root/'evals/generic-entrypoint.md').read_text(encoding='utf-8').rstrip() + '\n\n' + text[ends[0].start():]
 
 
 def read_suite(path):

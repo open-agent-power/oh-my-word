@@ -15,6 +15,12 @@ from .router import list_skills, route
 from .technology import scaffold
 
 
+def _dependency_summary(row):
+    required = ", ".join(row.get("dependencies", [])) or "(none)"
+    optional = ", ".join(row.get("optional_dependencies", [])) or "(none)"
+    return f"required: {required}; optional: {optional}"
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     if argv and argv[0] == "patent":
@@ -153,6 +159,7 @@ def main(argv=None):
             if args.json:
                 print(json.dumps(result, ensure_ascii=False, indent=2))
             else:
+                print("登记状态表示实现声明；依赖不是环境可用性检查。")
                 for row in result["skills"]:
                     path = row["path"] or "(planned; no implementation path)"
                     scope = row.get("mode_scope") or {}
@@ -162,6 +169,7 @@ def main(argv=None):
                     if extended:
                         suffix += f" | baseline: {extended}"
                     print(f"{row['name']:<18} {row['status']:<11} {path}{suffix}")
+                    print(f"  {_dependency_summary(row)}")
             return 0
         if args.command == "route":
             result = route(args.request)
@@ -169,11 +177,12 @@ def main(argv=None):
                 print(json.dumps(result, ensure_ascii=False, indent=2))
             else:
                 print(f"selected: {result['selected']}")
-                print(f"status: {'clarification-needed' if result['needs_clarification'] else 'ready'}")
+                print(f"status: {'clarification-needed' if result['needs_clarification'] else 'matched'}")
                 print(result["reason"])
                 for match in result["matches"]:
                     scope = f", {match['mode_scope']} scope" if match["mode_scope"] else ""
                     print(f"- {match['skill']} ({match['status']}{scope}): {', '.join(match['matched_terms'])}")
+                    print(f"  {_dependency_summary(match)}")
             return 0
         if args.command == "kb":
             from .knowledge import build_index, search, verify_index

@@ -6,7 +6,8 @@ skills:
     kind: router
     status: implemented
     modes: [routing, composition]
-    dependencies: [oh-my-technology, oh-my-patent, oh-my-proposal, oh-my-copyright, word-document]
+    dependencies: []
+    optional_dependencies: [oh-my-technology, oh-my-patent, oh-my-proposal, oh-my-copyright, word-document]
     evidence: [tests/test_word_skills.py]
   - name: oh-my-technology
     path: skills/oh-my-technology/SKILL.md
@@ -21,7 +22,8 @@ skills:
       test-report: baseline
       user-manual: baseline
       operations-manual: baseline
-    dependencies: [word-document]
+    dependencies: []
+    optional_dependencies: [word-document]
     evidence: [tests/test_pipeline.py, tests/test_technology_modes.py]
   - name: oh-my-patent
     path: skills/oh-my-patent/SKILL.md
@@ -29,6 +31,7 @@ skills:
     status: implemented
     modes: [invention, utility, design, disclosure, application-handoff]
     dependencies: []
+    optional_dependencies: []
     evidence: [tests/test_final_gate.py, tests/test_skill_bundle.py]
   - name: word-document
     path: skills/word-document/SKILL.md
@@ -36,6 +39,7 @@ skills:
     status: implemented
     modes: [docx-layout, template-style, template-slots]
     dependencies: []
+    optional_dependencies: []
     evidence: [tests/test_pipeline.py]
   - name: oh-my-proposal
     path: skills/oh-my-proposal/SKILL.md
@@ -43,11 +47,13 @@ skills:
     status: implemented
     modes: [proposal, feasibility, budget]
     dependencies: [word-document]
+    optional_dependencies: []
     evidence: [tests/test_proposal.py]
   - name: oh-my-copyright
     path: skills/oh-my-copyright/SKILL.md
     kind: business
     status: implemented
     modes: [software-copyright, source-material, user-manual]
-    dependencies: [word-document]
+    dependencies: []
+    optional_dependencies: [word-document]
     evidence: [tests/test_copyright.py]

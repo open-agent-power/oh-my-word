@@ -63,11 +63,16 @@ def load_registry(root: str | Path | None = None) -> list[dict]:
             or any(value not in _MODE_SCOPES for value in scope.values())
         ):
             raise ValueError(f"{name}: mode_scope must classify every mode as focused or baseline")
-        deps = row.get("dependencies", [])
-        if not isinstance(deps, list) or any(not isinstance(x, str) for x in deps):
-            raise ValueError(f"{name}: dependencies must be a string list")
-        if name in deps:
-            raise ValueError(f"{name}: cannot depend on itself")
+        for field in ("dependencies", "optional_dependencies"):
+            deps = row.get(field, [])
+            if not isinstance(deps, list) or any(not isinstance(x, str) for x in deps):
+                raise ValueError(f"{name}: {field} must be a string list")
+            if name in deps:
+                raise ValueError(f"{name}: {field} cannot depend on itself")
+            if len(deps) != len(set(deps)):
+                raise ValueError(f"{name}: duplicate {field}")
+        if set(row.get("dependencies", [])) & set(row.get("optional_dependencies", [])):
+            raise ValueError(f"{name}: required and optional dependencies must not overlap")
         evidence = row.get("evidence", [])
         if not isinstance(evidence, list) or any(not isinstance(x, str) for x in evidence):
             raise ValueError(f"{name}: evidence must be a string list")
@@ -90,9 +95,10 @@ def load_registry(root: str | Path | None = None) -> list[dict]:
             raise ValueError(f"{name}: planned skills must not advertise an implementation path")
     known = set(names)
     for row in rows:
-        for dep in row.get("dependencies", []):
-            if dep not in known:
-                raise ValueError(f"{row['name']}: unknown dependency {dep}")
+        for field in ("dependencies", "optional_dependencies"):
+            for dep in row.get(field, []):
+                if dep not in known:
+                    raise ValueError(f"{row['name']}: unknown {field} dependency {dep}")
     return rows
 
 
