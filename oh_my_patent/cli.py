@@ -155,12 +155,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_build.add_argument("--review", help="content-review.json 路径")
     p_build.add_argument(
         "--renderer",
-        choices=("local", "upstream"),
-        default="local",
+        choices=("auto", "local", "upstream"),
+        default="auto",
         help=(
-            "专利 DOCX 制作器：local=本地受控排版（默认）；"
-            "upstream=固定上游 handsomestWei 转换器 + 本项目边界版式（发明/实用新型；"
-            "缺图、坏公式、普通括号 LaTeX 会明确失败）"
+            "专利 DOCX 制作器：auto=发明/实用新型用固定上游转换器+本项目边界版式，"
+            "外观设计用本地排版（默认）；local=强制本地排版；upstream=强制上游（外观设计会拒绝）。"
+            "上游对缺图、坏公式、普通括号 LaTeX 明确失败；草稿占位稿请用 --renderer local"
         ),
     )
     _add_render_options(p_build)
@@ -311,13 +311,21 @@ def cmd_build(args: argparse.Namespace) -> int:
         )
         return 2
 
-    if getattr(args, "renderer", "local") == "upstream":
+    renderer = getattr(args, "renderer", "auto")
+    if renderer == "auto":
+        # 外观设计没有对应的上游四文书模型，继续使用本地受控排版。
+        renderer = "local" if draft.patent_type is PatentType.DESIGN else "upstream"
+    if renderer == "upstream":
         from .render import UpstreamRenderError, render_docx_upstream, upstream_identity
 
         try:
             written = render_docx_upstream(draft, args.output, options=options, split=args.split)
         except UpstreamRenderError as exc:
-            print(f"上游制作器拒绝生成：{exc}", file=sys.stderr)
+            print(
+                "上游制作器拒绝生成（默认 auto 对发明/实用新型使用固定上游；"
+                f"如需含占位句的草稿审阅稿请加 --renderer local）：{exc}",
+                file=sys.stderr,
+            )
             return 2
         identity = upstream_identity()
         print(
@@ -325,6 +333,7 @@ def cmd_build(args: argparse.Namespace) -> int:
         )
     else:
         written = render_docx(draft, args.output, options=options, split=args.split)
+        print("本地制作器：受控 OOXML 排版（--renderer local）")
     if knowledge:
         from word_skills.knowledge_context import record_patent_context
         record_patent_context(args.draft, written, knowledge, str(args.output) + ".knowledge.json")

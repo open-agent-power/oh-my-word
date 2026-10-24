@@ -142,18 +142,19 @@ python -m word_skills patent template invention -o outputs/draft.md
 
 专利 Skill、prompts、references 和六个领域模块的规范路径是 `skills/oh-my-patent/`；旧的 Python 包、`tools/patent.py` 和 `oh-my-patent` 命令继续可用。专利门禁和原 Python 包没有被通用技术文档渲染器反向依赖。
 
-### 可选的上游专利制作器
+### 专利制作器：默认 auto
 
-默认制作路径仍是本地受控排版（`--renderer local`）。2026-10-24 另外接入了固定上游 handsomestWei 的完整 Word 转换模块（MIT，提交 `6935a14d`，原件逐字节保存在 `oh_my_patent/render/_vendor/patent_application/`，每次制作前校验 SHA256）：
+自 2026-10-24 起，`build` 的默认制作器为 `auto`：发明/实用新型调用固定上游 handsomestWei 的完整 Word 转换模块（MIT，提交 `6935a14d`，原件逐字节保存在 `oh_my_patent/render/_vendor/patent_application/`，每次制作前校验 SHA256），外观设计仍用本地受控排版。
 
 ```powershell
-oh-my-patent build 稿件.md -o 申请文件.docx --renderer upstream
-oh-my-patent build 稿件.md -o 申请文件/ --split --renderer upstream
+oh-my-patent build 稿件.md -o 申请文件.docx                   # auto：发明/实用新型走上游
+oh-my-patent build 稿件.md -o 申请文件.docx --renderer local  # 草稿占位稿/强制本地
+oh-my-patent build 稿件.md -o 申请文件/ --split               # 每个部分独立成文件
 ```
 
-适配层只做三件事：把稿件投影成上游认识的 Markdown 文书、调用上游 `convert_md_to_docx`、在边界套用本项目 A4 / 黑色标题与正文 / 宋体 / 1.5 倍行距 / 2 字符首行缩进。有效公式生成原生 OMML；**缺图、公式回退为原文、普通括号误写 LaTeX 都会明确失败**，不会写成「制作成功」。该路径只支持发明与实用新型；外观设计仍用本地排版。
+适配层只做三件事：把稿件投影成上游认识的 Markdown 文书、调用上游 `convert_md_to_docx`、在边界套用本项目 A4 / 黑色标题与正文 / 宋体 / 1.5 倍行距 / 2 字符首行缩进。有效公式生成原生 OMML；**缺图、公式回退为原文、普通括号误写 LaTeX 会明确失败并提示 `--renderer local`**，不会写成「制作成功」。含未登记图件的草稿（如 `examples/invention-example.md`）请显式加 `--renderer local` 生成带占位句的审阅稿。
 
-默认未切换到上游：上游对缺图和坏公式的严格拒绝，与现有「非 `--strict` 草稿允许占位句继续出稿」的约定冲突；切换默认路径需要真实案卷和 Word/WPS 客户端复核后再定。`latex2mathml`、`docxcompose` 已列为运行依赖；固定原件、边界差异和限制见 [复用决策](docs/upstream-reuse.md)。
+限制：外观设计不走该路径；`latex2mathml`、`docxcompose` 为运行依赖；未做 Word/WPS 编辑往返与正式提交验收。固定原件、边界差异与验证范围见 [复用决策](docs/upstream-reuse.md)。
 
 ## 验证
 

@@ -108,14 +108,14 @@ def test_patent_template_build_and_tampered_context(tmp_path, kb, capsys):
     # remain separate and do not supply invented application identity or facts.
     example = Path(__file__).resolve().parents[1] / "examples/invention-example.md"
     draft.write_bytes(example.read_bytes())
-    assert patent(["build", str(draft), "-o", str(output)]) == 0
+    assert patent(["build", str(draft), "-o", str(output), "--renderer", "local"]) == 0
     receipt = read_json(Path(str(output) + ".knowledge.json"))
     assert receipt["state"] == "reference-bound-not-semantic-reviewed"
     assert receipt["draft_sha256"] == sha256(draft)
     folder = Path(str(draft) + ".knowledge")
     (folder / "context.md").write_text("modified", encoding="utf-8")
     blocked = tmp_path / "bad.docx"
-    assert patent(["build", str(draft), "-o", str(blocked)]) != 0
+    assert patent(["build", str(draft), "-o", str(blocked), "--renderer", "local"]) != 0
     assert not blocked.exists()
 
 
@@ -132,8 +132,8 @@ def test_patent_split_receipt_and_existing_output_preserved(tmp_path, kb):
     draft, output = tmp_path / "split.md", tmp_path / "split-output"
     assert patent(["template", "invention", "-o", str(draft), "--knowledge", str(kb)]) == 0
     draft.write_bytes((Path(__file__).resolve().parents[1] / "examples/invention-example.md").read_bytes())
-    assert patent(["build", str(draft), "-o", str(output), "--split"]) == 0
+    assert patent(["build", str(draft), "-o", str(output), "--split", "--renderer", "local"]) == 0
     assert read_json(Path(str(output) + ".knowledge.json"))["outputs"]
     before = {p: sha256(p) for p in output.rglob("*") if p.is_file()}
-    assert patent(["build", str(draft), "-o", str(output), "--split"]) != 0
+    assert patent(["build", str(draft), "-o", str(output), "--split", "--renderer", "local"]) != 0
     assert before == {p: sha256(p) for p in before}

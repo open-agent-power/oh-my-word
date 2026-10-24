@@ -14,7 +14,7 @@
 | 软著源码身份与选段 | 上游候选由 Agent 选择，`copyright_package.apply_selection` 投影为本地原件哈希和行段；`copyright.py` 校验 | 一份选择，两种用途的投影；不再独立生成第二份业务选择。上游源码抽取仅保留依赖，不负责最终分页 |
 | 手册结构转为通用稿件 | `copyright_manual.py` 调用成熟的 markdown-it-py，将章节、表格、命令和声明图片投影到现有 v1 | 保留适配器，不自造Markdown解析器；不引入上游另一套Word执行器 |
 | 技术/软著Word及通用交付 | `word_skills/render.py` / `delivery.py`，复用 python-docx、可选 docxtpl、外部预览工具 | 继续使用该制作链；页面、内容及业务审阅分别记录，不能由导出成功代替 |
-| 专利Word与交接 | `word_skills/legacy_patent.py` 只转发到原 CLI；`oh_my_patent/render/upstream.py` 调用固定上游转换器并套用本项目边界版式；原 `oh_my_patent/render/docx.py` 仍为默认路径 | 上游制作链已接成显式可选路径（`--renderer upstream`），含 A4/黑色/字体/行距/缩进边界与缺图/公式回退门禁；默认后端暂不切换，理由与证据见下方接入实现 |
+| 专利Word与交接 | `word_skills/legacy_patent.py` 只转发到原 CLI；`oh_my_patent/render/upstream.py` 调用固定上游转换器并套用本项目边界版式；原 `oh_my_patent/render/docx.py` 保留为本地草稿/外观设计路径 | 2026-10-24 第 32 轮起默认 `auto`：发明/实用新型走上游转换器，外观设计走本地；`--renderer local` 保留草稿占位稿；缺图/坏公式默认明确失败，见下方接入实现 |
 | 知识定位 | 固定原文直接阅读，必要时调用已有 knowledge/context 和RAGFlow适配 | 保持可选；不再建检索服务或新的自动事实库 |
 
 外部工具输入输出由适配器在边界转换。适配器可以增加明确的本地事实/安全约束，但不静默改原文、捏造确认、重写上游版本或把候选扫描结果变成事实。Fokkyp 当前存在多个内部函数钩子，不能仅因代码叫适配器就当作零维护：后续升级须固定版本，核对签名、默认值、失败行为和相应回归。
@@ -51,15 +51,23 @@
 
 ### 2026-10-24 接入实现（第 30 轮）
 
-上游制作链已接成**显式可选路径** `oh-my-patent build … --renderer upstream`，默认路径保持本地排版。原件逐字节保存在 `oh_my_patent/render/_vendor/patent_application/`（`md_to_docx.py`、`math_to_omml.py`、`latex_delimiters.py`、`stdio_utf8.py`、`emit_application_docx.py` 及 MIT LICENSE），SHA256 与上游 `6935a14d` 一致并写入 `UPSTREAM.json`；`oh_my_patent.render.upstream` 在每次制作前校验，哈希不符即拒绝。适配层只负责：稿件→四类 Markdown 投影（章节组装复用本地渲染层的同一实现）、调用上游 `convert_md_to_docx`、边界版面与失败门禁；原文解析、表格和公式转换没有重写。
+上游制作链在第 30 轮先接成**显式可选路径** `oh-my-patent build … --renderer upstream`（第 32 轮改为默认 `auto`，见下节），当时默认路径保持本地排版。原件逐字节保存在 `oh_my_patent/render/_vendor/patent_application/`（`md_to_docx.py`、`math_to_omml.py`、`latex_delimiters.py`、`stdio_utf8.py`、`emit_application_docx.py` 及 MIT LICENSE），SHA256 与上游 `6935a14d` 一致并写入 `UPSTREAM.json`；`oh_my_patent.render.upstream` 在每次制作前校验，哈希不符即拒绝。适配层只负责：稿件→四类 Markdown 投影（章节组装复用本地渲染层的同一实现）、调用上游 `convert_md_to_docx`、边界版面与失败门禁；原文解析、表格和公式转换没有重写。
 
 边界版式沿用现有配置：A4（210×297 mm）、页边距 25/25/15/15 mm、标题与正文黑色、宋体正文 12 pt、1.5 倍行距、2 字符首行缩进、标题字号 22/16/12/12 pt；上游自动编号列表在边界还原为纯文本编号（本项目不用 WPS 不可靠的 `numPr`）。失败门禁：公式回退为原文、含公式但无 OMML 对象、缺图/图片无法嵌入、普通括号 LaTeX、外观设计均明确失败，不生成「成功」产物。
 
 实测：4 组合成内容（普通、公式+表格、附图+长文、实用新型）生成 4 份单文件 DOCX；LibreOffice 26.8 实际渲染 17 页并逐页查看。核对结果：A4、页边距、标题字号/黑色、12 pt 正文、24 pt 首行缩进、`numPr=0`、蓝色像素计数 0、4 个原生 OMML、表格 3 行（含公式单元格）、图件可见、长文 30 段与结尾标记可在 PDF 定位。负例（坏公式回退、缺图、普通括号 LaTeX、外观设计）均被拒绝。证据（`audit.json`、逐页 PNG、PDF、运行日志）在忽略目录 `.agent/evidence/patent-upstream-20261024/`；本机 LibreOffice 必须把 `TEMP/TMP/HOME/XDG_*` 指向可写工作区目录，否则会报「source file could not be loaded」。
 
-默认未切换：上游对缺图/坏公式的严格拒绝，与现有「非 `--strict` 草稿允许占位句继续出稿、`--force` 可强制」的契约冲突（示例稿件本身含未登记图件的附图说明）。切换默认路径需要先决定是否改变该契约，并在 Word/WPS 客户端复核。已知限制：外观设计不支持；`latex2mathml` 对部分畸形 LaTeX 仍会产出公式对象（不是回退，门禁无法判定数学语义）；LibreOffice 中块级公式的可见位置与 Word 可能不同；未做 Word/WPS 编辑往返、复杂公式全集和正式提交兼容验收。
+第 30 轮交付时默认未切换：上游对缺图/坏公式的严格拒绝，与现有「非 `--strict` 草稿允许占位句继续出稿、`--force` 可强制」的契约冲突（示例稿件本身含未登记图件的附图说明）。已知限制：外观设计不支持；`latex2mathml` 对部分畸形 LaTeX 仍会产出公式对象（不是回退，门禁无法判定数学语义）；LibreOffice 中块级公式的可见位置与 Word 可能不同；未做 Word/WPS 编辑往返、复杂公式全集和正式提交兼容验收。
 
-安装态验收：`tools/check_installed_delivery.py` 于仓库外安装的 wheel 环境中，用纯文本发明稿分别执行默认本地制作器与 `--renderer upstream`，校验固定 commit/原件哈希、A4 版面、权利要求书/说明书/说明书摘要三类文书、正文标记以及默认路径仍为本地。CI 的 Linux 3.10/3.12、Windows 3.12 矩阵和隔离 wheel 任务都会执行该步骤；本机沙箱里仓库外可写目录受限，本地执行时用工作区内的仓库外目录模拟同一流程。
+安装态验收：`tools/check_installed_delivery.py` 于仓库外安装的 wheel 环境中，用纯文本发明稿执行默认 `auto`（断言使用固定上游、A4、三类文书与正文标记）、外观设计默认本地回落、以及显式 `--renderer local`；固定 commit/原件哈希同时校验。CI 的 Linux 3.10/3.12、Windows 3.12 矩阵和隔离 wheel 任务都会执行该步骤；本机沙箱里仓库外可写目录受限，本地执行时用工作区内的仓库外目录模拟同一流程。
+
+### 2026-10-24 第 32 轮：默认切换（auto）
+
+在可选路径基础上，用更接近真实的复杂合成稿复核：发明稿 5 项权利要求（含 4 项从属与多项引用）、结构化发明内容、内联/块级公式、含公式单元格的表格、2 幅附图；实用新型 2 项权利要求 + 1 幅附图；外观设计稿件上游拒绝、本地可出稿。两稿共 9 页实际渲染并逐页查看：A4、页边距、黑色标题、12 pt 正文、24 pt 缩进、`numPr=0`、蓝色像素 0、发明稿 4 个原生 OMML、表格 3 行、图件可见；未发现新的映射缺口。
+
+据此把默认制作器改为 `auto`：发明/实用新型使用固定上游转换器，外观设计回落本地；不可用稿（缺图、公式回退、无 OMML、裸括号 LaTeX）默认**明确失败并提示 `--renderer local`**，不自动回退、不改变交付状态。`--renderer local` 保留用于含占位句的草稿审阅稿，旧命令与参数不变。该行为由 `tests/test_patent_upstream_render.py`（19 项）与安装态 `tools/check_installed_delivery.py` 固化，并随 CI 三平台矩阵执行。
+
+仍然成立的限制：Word/WPS 编辑往返、复杂公式全集、真实案卷与正式提交兼容未验证；本机渲染只覆盖 LibreOffice 26.8，块级公式可见位置可能与 Word 不同；外观设计不支持该路径。本轮只切换 `build`；`handoff` 仍显式使用本地排版（官方 XML 转换兼容未验证），两者是否统一留作后续轮次。
 
 试跑使用Codex随附Python 3.12、python-docx 1.2.0；latex2mathml 3.81.1、PyYAML 6.0.3当时仅装在本机忽略的 `.agent/evidence/patent-render-trial-20261024/deps/`，不修改当时的项目虚拟环境或发行依赖；第 30 轮接入后 latex2mathml 与 docxcompose 已列入 pyproject 运行依赖。证据同目录保存源SHA256清单、fixture、运行命令/日志、21份生成物、PDF/页面、对象与哨兵检查、3个负例；脚本为 `fetch.py`、`trial.py`、`render_trial.py`、`negative.py` 和 `audit.py`。首轮PDF文字提取因捆绑Poppler不含pdftotext而失败，改用随附pypdf后全部完成，未把失败写成第一次即通过。计划附图生成器只下载审查，图中采用预先制作的合成图，不宣称自动制图链已验收。
 

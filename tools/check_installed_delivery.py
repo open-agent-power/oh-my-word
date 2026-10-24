@@ -73,34 +73,48 @@ type: invention
 """
 
 
+PATENT_DESIGN_FIXTURE = """---
+title: 安装验收外观样稿
+type: design
+---
+
+# 简要说明
+
+本外观设计产品用于安装状态验收。
+"""
+
+
 def check_patent_renderers(output, records, scripts, suffix, Document):
-    """在安装态下分别执行默认本地制作器与固定上游制作器。
+    """核对安装态的默认制作器（auto）、显式上游与显式本地。
 
     安装态最容易漏掉的是 ``_vendor`` 打包与上游脚本的导入路径；这里直接
     调用安装后的 ``oh-my-patent`` 控制台脚本，并核对固定原件哈希、A4 版面和
-    三类文书，避免只验证 import 而不验证真实制作。
+    三类文书，避免只验证 import 而不验证真实制作。默认 auto 对发明/实用新型
+    使用固定上游，对外观设计使用本地排版；显式 local 仍用于草稿占位稿。
     """
     from oh_my_patent.render.upstream import upstream_identity
 
     patent_cli = str(scripts / ("oh-my-patent" + suffix))
     fixture = output / "patent-renderer-fixture.md"
     fixture.write_text(PATENT_RENDERER_FIXTURE, encoding="utf-8")
+    design_fixture = output / "patent-design-fixture.md"
+    design_fixture.write_text(PATENT_DESIGN_FIXTURE, encoding="utf-8")
 
-    upstream_docx = output / "patent-upstream.docx"
-    upstream_stdout = command(
-        [patent_cli, "build", str(fixture), "-o", str(upstream_docx), "--renderer", "upstream"],
+    default_docx = output / "patent-default.docx"
+    default_stdout = command(
+        [patent_cli, "build", str(fixture), "-o", str(default_docx)],
         output,
         records,
     )
-    if "上游制作器" not in upstream_stdout:
-        raise RuntimeError("Upstream renderer did not report its pinned identity")
+    if "上游制作器" not in default_stdout:
+        raise RuntimeError("Default (auto) renderer did not use the pinned upstream renderer")
     identity = upstream_identity()
     if identity["commit"] != "6935a14d342ed9c7a07440c999d1b7bf1852a701":
         raise RuntimeError(f"Unexpected pinned upstream commit: {identity['commit']}")
     if identity.get("modifications"):
         raise RuntimeError("Vendored upstream files are marked as modified")
 
-    document = Document(upstream_docx)
+    document = Document(default_docx)
     section = document.sections[0]
     page_mm = [round(section.page_width.mm, 1), round(section.page_height.mm, 1)]
     if abs(page_mm[0] - 210) > 1 or abs(page_mm[1] - 297) > 1:
@@ -115,18 +129,38 @@ def check_patent_renderers(output, records, scripts, suffix, Document):
     if "$" in body:
         raise RuntimeError("Upstream renderer left raw dollar math in the body")
 
-    # 默认路径必须仍是本地制作器：不带 --renderer 也应成功，且不改变既有行为。
+    # 默认 auto：外观设计必须回落本地排版，而不是被上游拒绝。
+    design_docx = output / "patent-design.docx"
+    design_stdout = command(
+        [patent_cli, "build", str(design_fixture), "-o", str(design_docx)],
+        output,
+        records,
+    )
+    if "本地制作器" not in design_stdout:
+        raise RuntimeError("Default (auto) renderer did not use the local renderer for design")
+    design_titles = [p.text for p in Document(design_docx).paragraphs if p.style.name == "Heading 1"]
+    if design_titles:
+        raise RuntimeError(f"Design output unexpectedly used upstream headings: {design_titles}")
+
+    # 显式 local 仍可用（缺图草稿的占位审阅稿路径）。
     local_docx = output / "patent-local.docx"
-    command([patent_cli, "build", str(fixture), "-o", str(local_docx)], output, records)
+    local_stdout = command(
+        [patent_cli, "build", str(fixture), "-o", str(local_docx), "--renderer", "local"],
+        output,
+        records,
+    )
+    if "本地制作器" not in local_stdout:
+        raise RuntimeError("Explicit --renderer local did not report the local renderer")
     if not local_docx.is_file():
-        raise RuntimeError("Default (local) patent renderer produced no file")
+        raise RuntimeError("Explicit --renderer local produced no file")
 
     return {
         "upstream_commit": identity["commit"],
         "upstream_files": len(identity["files"]),
         "upstream_titles": titles,
         "upstream_page_mm": page_mm,
-        "default_renderer": "local",
+        "default_renderer": "auto: upstream for invention/utility, local for design",
+        "local_renderer_ok": True,
         "scope": "synthetic fixtures; no writing-quality or filing acceptance",
     }
 

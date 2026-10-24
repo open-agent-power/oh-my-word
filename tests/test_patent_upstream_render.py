@@ -11,7 +11,9 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import hashlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -318,6 +320,124 @@ type: invention
             document = Document(str(output))
             titles = [p.text for p in document.paragraphs if p.style.name == "Heading 1"]
             self.assertEqual(titles, ["权利要求书", "说明书", "说明书摘要"])
+
+
+COMPLETE_DRAFT = """---
+title: 一种安装验收装置
+type: invention
+drawings:
+  - {{number: 1, caption: 结构图, path: {image}}}
+---
+
+# 权利要求书
+
+1. 一种安装验收装置，其特征在于，包括采集模块和存储模块。
+
+# 说明书
+
+【技术领域】
+
+本合成材料仅用于测试，标记AUTO_FIELD。
+
+【具体实施方式】
+
+采集模块读取记录，存储模块保存记录，标记AUTO_END。
+
+# 摘要
+
+本合成材料仅用于测试，标记AUTO_ABS。
+"""
+
+DESIGN_DRAFT = """---
+title: 水杯
+type: design
+---
+
+# 简要说明
+
+本外观设计产品用于盛装饮用水。
+"""
+
+MISSING_FIGURE_DRAFT = """---
+title: 一种缺图装置
+type: invention
+drawings:
+  - {number: 1, caption: 结构图, path: no-such-figure.png}
+---
+
+# 权利要求书
+
+1. 一种缺图装置，其特征在于，包括采集模块。
+
+# 说明书
+
+【技术领域】
+
+本合成材料仅用于测试，标记MISS_FIELD。
+
+# 摘要
+
+本合成材料仅用于测试，标记MISS_ABS。
+"""
+
+
+class DefaultRendererTests(unittest.TestCase):
+    """默认 auto：发明/实用新型走上游，外观设计走本地；不可用稿明确失败。"""
+
+    def _build(self, draft_path: Path, output: Path, *extra: str):
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            code = cli_main(["build", str(draft_path), "-o", str(output), *extra])
+        return code, stdout.getvalue(), stderr.getvalue()
+
+    def test_default_uses_upstream_for_invention(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            image = root / "figure-1.png"
+            image.write_bytes(PNG_BYTES)
+            draft = root / "complete.md"
+            draft.write_text(COMPLETE_DRAFT.format(image=str(image).replace("\\", "/")), encoding="utf-8")
+            output = root / "out.docx"
+            code, stdout, _ = self._build(draft, output)
+            self.assertEqual(code, 0)
+            self.assertIn("上游制作器", stdout)
+            document = Document(str(output))
+            titles = [p.text for p in document.paragraphs if p.style.name == "Heading 1"]
+            self.assertEqual(titles, ["权利要求书", "说明书", "说明书摘要", "说明书附图"])
+
+    def test_default_uses_local_for_design(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            draft = root / "design.md"
+            draft.write_text(DESIGN_DRAFT, encoding="utf-8")
+            output = root / "design.docx"
+            code, stdout, _ = self._build(draft, output)
+            self.assertEqual(code, 0)
+            self.assertIn("本地制作器", stdout)
+            document = Document(str(output))
+            self.assertFalse(
+                [p for p in document.paragraphs if p.style.name == "Heading 1"],
+                "本地排版不应出现上游的 Heading 1 文书标题",
+            )
+
+    def test_default_fails_on_missing_figure_and_points_to_local(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            draft = root / "missing.md"
+            draft.write_text(MISSING_FIGURE_DRAFT, encoding="utf-8")
+            output = root / "missing.docx"
+            code, _, stderr = self._build(draft, output)
+            self.assertEqual(code, 2)
+            self.assertIn("--renderer local", stderr)
+            self.assertFalse(output.exists())
+
+            local = root / "missing-local.docx"
+            code, stdout, _ = self._build(draft, local, "--renderer", "local")
+            self.assertEqual(code, 0)
+            self.assertIn("本地制作器", stdout)
+            self.assertTrue(local.is_file())
+            body = "\n".join(p.text for p in Document(str(local)).paragraphs)
+            self.assertIn("缺失", body)
 
 
 if __name__ == "__main__":
