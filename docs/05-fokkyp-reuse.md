@@ -1,5 +1,7 @@
 # Fokkyp 软著流程直接复用
 
+2026-10-24补充：软著入口增加无需本项目后端的文本起草/审阅路径，选择性适配本固定版本的业务理解与操作手册方法；新参考见 [领域写法](../skills/oh-my-copyright/references/drafting.md) 和 [写前来源](../skills/oh-my-copyright/references/domain-sources.md)。原有工具流程、vendor 字节、哈希与正式审阅要求不变。对上游当前提交 `1159f6d280783616e1247f768690eac97c1a3f6e` 实读 LICENSE 为 AGPL-3.0，本项目不升级、不引入该版本；既有 MIT 提交继续明确固定。搜索结果仍可能显示旧版本，许可和内容须按实际提交核对。
+
 更新：2026-10-17。当前固定 [2.6 e78f746e0254ed4be7e9a561ce0acc7180d5370a](https://github.com/Fokkyp/SoftwareCopyright-Skill/tree/e78f746e0254ed4be7e9a561ce0acc7180d5370a)，MIT。此前2.5仅改编流程；本轮根据用户要求改为实际复用阶段脚本。完整许可证保留在 third_party/licenses/fokkyp-MIT.txt 及 vendor/LICENSE。
 
 ## 直接复用
