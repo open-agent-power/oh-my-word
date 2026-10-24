@@ -1,8 +1,9 @@
-# Direct dependency versions verified on 2026-10-22 with Python 3.12.14.
+# Direct dependency versions verified on 2026-10-24 with Python 3.12.14.
 # Includes optional ingest/templates/dev dependencies; not a transitive lockfile.
 python-docx==1.2.0
 docxtpl==0.20.2
 docxcompose==1.4.1
+latex2mathml==3.81.1
 markitdown[docx,pdf]==0.1.9
 PyYAML==6.0.3
 pdfplumber==0.11.10

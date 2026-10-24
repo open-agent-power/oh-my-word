@@ -153,6 +153,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_build.add_argument("--final", action="store_true", help="执行事实与内容审查门禁；仅表示审阅交付就绪")
     p_build.add_argument("--facts", help="TECH_FACTS.json 路径")
     p_build.add_argument("--review", help="content-review.json 路径")
+    p_build.add_argument(
+        "--renderer",
+        choices=("local", "upstream"),
+        default="local",
+        help=(
+            "专利 DOCX 制作器：local=本地受控排版（默认）；"
+            "upstream=固定上游 handsomestWei 转换器 + 本项目边界版式（发明/实用新型；"
+            "缺图、坏公式、普通括号 LaTeX 会明确失败）"
+        ),
+    )
     _add_render_options(p_build)
 
     p_review = sub.add_parser("review-init", help="生成待完成内容审查骨架，不自动判定通过")
@@ -301,7 +311,20 @@ def cmd_build(args: argparse.Namespace) -> int:
         )
         return 2
 
-    written = render_docx(draft, args.output, options=options, split=args.split)
+    if getattr(args, "renderer", "local") == "upstream":
+        from .render import UpstreamRenderError, render_docx_upstream, upstream_identity
+
+        try:
+            written = render_docx_upstream(draft, args.output, options=options, split=args.split)
+        except UpstreamRenderError as exc:
+            print(f"上游制作器拒绝生成：{exc}", file=sys.stderr)
+            return 2
+        identity = upstream_identity()
+        print(
+            f"上游制作器：handsomestWei@{identity['commit'][:7]}（{len(identity['files'])} 份原件哈希已校验）"
+        )
+    else:
+        written = render_docx(draft, args.output, options=options, split=args.split)
     if knowledge:
         from word_skills.knowledge_context import record_patent_context
         record_patent_context(args.draft, written, knowledge, str(args.output) + ".knowledge.json")

@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/handsomestWei/patent-disclosure-skill",
+  "commit": "6935a14d342ed9c7a07440c999d1b7bf1852a701",
+  "license": "MIT",
+  "source_dir": "skills/patent-application/tools/",
+  "files": {
+    "LICENSE": "d9329ae3b2de58aebaa015d8d1570513d48f1702318e6423896a4620845ab798",
+    "emit_application_docx.py": "97162759ad4e7b6af23b16ec89db5fb866c8b69e262e5bbf09a42e53a4e1e0ca",
+    "latex_delimiters.py": "c74ad7d67d44e9a8d9637bcd8b915ce0aea7dafac4041308fcca10aab14aaf35",
+    "math_to_omml.py": "9877ab5dc9288baa6ded9d431d8d7f0a843f08e62beea13babadc515a098866f",
+    "md_to_docx.py": "58445c5742c6d3687a92a15e77fc6735d0e56e025bfab575b930b23a8f4ba0eb",
+    "stdio_utf8.py": "b66838457a55499568ffcce347e75b348ccccb2af4cd73f5799b16e4ed127e84"
+  },
+  "modifications": []
+}

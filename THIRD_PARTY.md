@@ -1,6 +1,6 @@
 # 第三方来源与复用记录
 
-更新日期：2026-10-15。本项目使用成熟库处理 Word、模板与材料；本地胶水代码实现证据契约、模式校验及交付状态。没有复制 Anthropic DOCX、字体文件或外部专利实现代码。
+更新日期：2026-10-24。本项目使用成熟库处理 Word、模板与材料；本地胶水代码实现证据契约、模式校验及交付状态。没有复制 Anthropic DOCX 或字体文件；专利制作模块按 MIT 许可直接复用，原件与哈希见下表。
 
 ## 已改编的写作规则
 
@@ -11,6 +11,12 @@
 | [handsomestWei/patent-disclosure-skill](https://github.com/handsomestWei/patent-disclosure-skill/tree/6935a14d342ed9c7a07440c999d1b7bf1852a701) | [MIT](third_party/licenses/patent-disclosure-MIT.txt) | skills/oh-my-patent/references/drafting-method.md | 选择性适配交底到各文稿部分的材料映射及逐权项/实施方式/附图对照；不引入其执行代码、目录/YAML协议、固定对比文件数或交付政策 |
 
 以上实际改编项及运行依赖版本记录在 [upstream.lock.json](upstream.lock.json)，并保留完整许可证。
+
+## 直接复用的执行代码
+
+| 来源与固定提交 | 许可 | 原件与落点 | 修改范围 |
+|---|---|---|---|
+| [handsomestWei/patent-disclosure-skill](https://github.com/handsomestWei/patent-disclosure-skill/tree/6935a14d342ed9c7a07440c999d1b7bf1852a701) | [MIT](third_party/licenses/patent-disclosure-MIT.txt) | `oh_my_patent/render/_vendor/patent_application/`：`md_to_docx.py`、`math_to_omml.py`、`latex_delimiters.py`、`stdio_utf8.py`、`emit_application_docx.py`、上游 `LICENSE` 与 `UPSTREAM.json`（SHA256） | 上游文件逐字节未修改，运行时校验哈希；本项目适配在 `oh_my_patent/render/upstream.py`（稿件→Markdown、边界版面、失败门禁），不改上游解析/表格/公式转换 |
 
 2026-10-24 技术写作参考另提供 [Google Audience](https://developers.google.com/tech-writing/one/audience)、[Documents](https://developers.google.com/tech-writing/one/documents) 的阅读入口，不复制课程（页面通常为 CC BY 4.0，例外依原页）。报告组织与审阅方法参考 Carol A. Vidoli，1992，[NASA-TM-105419](https://ntrs.nasa.gov/citations/19930013813)；原始记录标注美国政府作品、允许公共使用。新增示意案例为本项目编写，不代表实验结果；未引入两者代码、图像或行政要求。
 
@@ -25,8 +31,9 @@
 | 库 | 本轮验证版本 | 使用方式与许可 |
 |---|---|---|
 | python-docx | 1.2.0 | 直接依赖，MIT；DOCX 对象与样式 |
+| docxcompose | 1.4.1 | 直接依赖，MIT；通用模板子文档与上游专利多文书合并 |
+| latex2mathml | 3.81.1 | 直接依赖，MIT-0；上游专利制作器的 LaTeX→MathML→OMML |
 | docxtpl | 0.20.2 | 可选依赖，LGPL-2.1；受限插槽模板 |
-| docxcompose | 1.4.1 | docxtpl 子文档辅助，MIT |
 | MarkItDown | 0.1.8 | 可选依赖，MIT；本地 DOCX/PDF 摄入 |
 | PyYAML | 6.0.3 | 直接依赖，MIT；章节契约 |
 | markdown-it-py | 运行时版本记入测试环境 | 直接依赖，MIT；复用Markdown解析而不自写语法处理器 |

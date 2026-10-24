@@ -11,14 +11,23 @@
         "skills/patent-application/prompts/claims_builder.md",
         "skills/patent-application/prompts/specification_builder.md",
         "skills/patent-application/prompts/consistency.md",
-        "skills/patent-application/references/disclosure_to_spec_map.md"
+        "skills/patent-application/references/disclosure_to_spec_map.md",
+        "skills/patent-application/tools/md_to_docx.py",
+        "skills/patent-application/tools/math_to_omml.py",
+        "skills/patent-application/tools/latex_delimiters.py",
+        "skills/patent-application/tools/stdio_utf8.py",
+        "skills/patent-application/tools/emit_application_docx.py",
+        "LICENSE"
       ],
       "license_file": "third_party/licenses/patent-disclosure-MIT.txt",
       "destination_files": [
-        "skills/oh-my-patent/references/drafting-method.md"
+        "skills/oh-my-patent/references/drafting-method.md",
+        "oh_my_patent/render/_vendor/patent_application/",
+        "oh_my_patent/render/upstream.py"
       ],
-      "adaptation": "Selectively adapted disclosure-to-section mapping and claim/embodiment/figure consistency review as a text writing method. No executable tools, directory/YAML protocol, fixed prior-art counts or upstream delivery policies imported.",
-      "verification": "Pinned source passages and original MIT license inspected; local method attribution and references checked. No candidate executable or writing-quality trial run.",
+      "adaptation": "Selectively adapted disclosure-to-section mapping and claim/embodiment/figure consistency review as a text writing method, and vendored the unmodified Word conversion tools (md_to_docx/math_to_omml/latex_delimiters/stdio_utf8/emit_application_docx) for the opt-in `--renderer upstream` path. Local adapter only projects PatentDraft to upstream Markdown, applies the project A4/black-font/margin layout at the boundary, and rejects missing images, raw-LaTeX formula fallback and bare-paren LaTeX. No directory/YAML protocol, fixed prior-art counts or upstream delivery policies imported, and the default renderer is unchanged.",
+      "verification": "Pinned source bytes and MIT license checked by tests/test_patent_upstream_render.py at every run (SHA256); 4 synthetic cases (plain, math+table, figure+long, utility) generated and 17 pages rendered/visually inspected with LibreOffice 26.8; negative cases rejected. No Word/WPS editing round-trip, complex-formula or filing acceptance.",
+      "vendor_manifest": "oh_my_patent/render/_vendor/patent_application/UPSTREAM.json",
       "inspected_on": "2026-10-24"
     },
     {
@@ -129,6 +138,16 @@
       "tested_version": "1.2.0"
     },
     {
+      "package": "docxcompose",
+      "role": "required",
+      "tested_version": "1.4.1"
+    },
+    {
+      "package": "latex2mathml",
+      "role": "required",
+      "tested_version": "3.81.1"
+    },
+    {
       "package": "PyYAML",
       "role": "required",
       "tested_version": "6.0.3"
@@ -172,11 +191,6 @@
       "package": "docxtpl",
       "role": "optional-templates",
       "tested_version": "0.20.2"
-    },
-    {
-      "package": "docxcompose",
-      "role": "optional-templates",
-      "tested_version": "1.4.1"
     }
   ],
   "notes": "Package versions are an acceptance snapshot, not a transitive dependency lock or a claim that upstream repository commits correspond to the installed distributions. Installation constraints remain in pyproject.toml. No fonts or external office converters are bundled."

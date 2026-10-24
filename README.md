@@ -142,6 +142,19 @@ python -m word_skills patent template invention -o outputs/draft.md
 
 专利 Skill、prompts、references 和六个领域模块的规范路径是 `skills/oh-my-patent/`；旧的 Python 包、`tools/patent.py` 和 `oh-my-patent` 命令继续可用。专利门禁和原 Python 包没有被通用技术文档渲染器反向依赖。
 
+### 可选的上游专利制作器
+
+默认制作路径仍是本地受控排版（`--renderer local`）。2026-10-24 另外接入了固定上游 handsomestWei 的完整 Word 转换模块（MIT，提交 `6935a14d`，原件逐字节保存在 `oh_my_patent/render/_vendor/patent_application/`，每次制作前校验 SHA256）：
+
+```powershell
+oh-my-patent build 稿件.md -o 申请文件.docx --renderer upstream
+oh-my-patent build 稿件.md -o 申请文件/ --split --renderer upstream
+```
+
+适配层只做三件事：把稿件投影成上游认识的 Markdown 文书、调用上游 `convert_md_to_docx`、在边界套用本项目 A4 / 黑色标题与正文 / 宋体 / 1.5 倍行距 / 2 字符首行缩进。有效公式生成原生 OMML；**缺图、公式回退为原文、普通括号误写 LaTeX 都会明确失败**，不会写成「制作成功」。该路径只支持发明与实用新型；外观设计仍用本地排版。
+
+默认未切换到上游：上游对缺图和坏公式的严格拒绝，与现有「非 `--strict` 草稿允许占位句继续出稿」的约定冲突；切换默认路径需要真实案卷和 Word/WPS 客户端复核后再定。`latex2mathml`、`docxcompose` 已列为运行依赖；固定原件、边界差异和限制见 [复用决策](docs/upstream-reuse.md)。
+
 ## 验证
 
 ```powershell
