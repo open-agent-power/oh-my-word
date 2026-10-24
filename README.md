@@ -168,6 +168,8 @@ python tools/check_full_dependencies.py
 
 `check_full_dependencies.py` 使用同一解释器执行 pytest 全部测试并记录依赖版本、测试数和跳过项；缺依赖、失败、skip、xfail 或 xpass 均使验收失败。报告保存在本地 `outputs/acceptance/`。
 
+`tools/check_installed_delivery.py` 在仓库外安装 wheel 后，会用纯文本发明稿分别执行默认本地制作器与 `--renderer upstream`，核对固定原件哈希、A4 版面、权利要求书/说明书/说明书摘要三类文书与正文标记，并确认默认路径未变。CI 的 Linux 3.10/3.12、Windows 3.12 矩阵与隔离 wheel 任务都执行该步骤。
+
 默认 `pytest` 和完整依赖检查器均只收集 `tests/` 和 `evals/`，避免 `outputs/` 中摄入的外部项目测试被误收集。完整依赖检查器同时记录依赖与测试执行结果，拒绝skip/xfail/xpass；公共采集工具的测试还需安装 `beautifulsoup4`。这些测试不会启动模型跑批或 RAGFlow 部署。
 
 ## 许可与来源

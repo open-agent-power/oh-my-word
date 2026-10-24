@@ -39,6 +39,99 @@ def write_json(path, data):
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+#: 专利制作器安装态夹具。纯文本、无图片，避免依赖外部图件或本机 Office。
+PATENT_RENDERER_FIXTURE = """---
+title: 安装验收专利样稿
+type: invention
+---
+
+# 权利要求书
+
+1. 一种安装验收方法，其特征在于，包括执行一次固定上游制作。
+
+# 说明书
+
+【技术领域】
+
+本材料仅用于安装验收，标记INSTALL_FIELD。
+
+【背景技术】
+
+不含真实技术事实，标记INSTALL_BG。
+
+【发明内容】
+
+包括接收步骤与输出步骤。
+
+【具体实施方式】
+
+步骤S101，接收记录，标记INSTALL_END。
+
+# 摘要
+
+本材料仅用于安装验收，标记INSTALL_ABS。
+"""
+
+
+def check_patent_renderers(output, records, scripts, suffix, Document):
+    """在安装态下分别执行默认本地制作器与固定上游制作器。
+
+    安装态最容易漏掉的是 ``_vendor`` 打包与上游脚本的导入路径；这里直接
+    调用安装后的 ``oh-my-patent`` 控制台脚本，并核对固定原件哈希、A4 版面和
+    三类文书，避免只验证 import 而不验证真实制作。
+    """
+    from oh_my_patent.render.upstream import upstream_identity
+
+    patent_cli = str(scripts / ("oh-my-patent" + suffix))
+    fixture = output / "patent-renderer-fixture.md"
+    fixture.write_text(PATENT_RENDERER_FIXTURE, encoding="utf-8")
+
+    upstream_docx = output / "patent-upstream.docx"
+    upstream_stdout = command(
+        [patent_cli, "build", str(fixture), "-o", str(upstream_docx), "--renderer", "upstream"],
+        output,
+        records,
+    )
+    if "上游制作器" not in upstream_stdout:
+        raise RuntimeError("Upstream renderer did not report its pinned identity")
+    identity = upstream_identity()
+    if identity["commit"] != "6935a14d342ed9c7a07440c999d1b7bf1852a701":
+        raise RuntimeError(f"Unexpected pinned upstream commit: {identity['commit']}")
+    if identity.get("modifications"):
+        raise RuntimeError("Vendored upstream files are marked as modified")
+
+    document = Document(upstream_docx)
+    section = document.sections[0]
+    page_mm = [round(section.page_width.mm, 1), round(section.page_height.mm, 1)]
+    if abs(page_mm[0] - 210) > 1 or abs(page_mm[1] - 297) > 1:
+        raise RuntimeError(f"Upstream renderer did not apply A4: {page_mm}")
+    titles = [p.text for p in document.paragraphs if p.style.name == "Heading 1"]
+    if titles != ["权利要求书", "说明书", "说明书摘要"]:
+        raise RuntimeError(f"Unexpected upstream part titles: {titles}")
+    body = "\n".join(p.text for p in document.paragraphs)
+    missing = [m for m in ("INSTALL_FIELD", "INSTALL_BG", "INSTALL_END", "INSTALL_ABS") if m not in body]
+    if missing:
+        raise RuntimeError(f"Upstream renderer lost fixture markers: {missing}")
+    if "$" in body:
+        raise RuntimeError("Upstream renderer left raw dollar math in the body")
+
+    # 默认路径必须仍是本地制作器：不带 --renderer 也应成功，且不改变既有行为。
+    local_docx = output / "patent-local.docx"
+    command([patent_cli, "build", str(fixture), "-o", str(local_docx)], output, records)
+    if not local_docx.is_file():
+        raise RuntimeError("Default (local) patent renderer produced no file")
+
+    return {
+        "upstream_commit": identity["commit"],
+        "upstream_files": len(identity["files"]),
+        "upstream_titles": titles,
+        "upstream_page_mm": page_mm,
+        "default_renderer": "local",
+        "scope": "synthetic fixtures; no writing-quality or filing acceptance",
+    }
+
+
+
 def smoke(output, records, *, preview=False, soffice=None, pdftoppm=None):
     import word_skills
     import oh_my_patent
@@ -56,6 +149,7 @@ def smoke(output, records, *, preview=False, soffice=None, pdftoppm=None):
     suffix = ".exe" if sys.platform == "win32" else ""
     for name in ("word-skills", "oh-my-patent"):
         command([str(scripts / (name + suffix)), "--help"], output, records)
+    patent_renderers = check_patent_renderers(output, records, scripts, suffix, Document)
 
     text = "这是安装验收使用的合成材料，不代表真实项目或专业审阅。"
     source = output / "source.txt"
@@ -106,6 +200,7 @@ def smoke(output, records, *, preview=False, soffice=None, pdftoppm=None):
     command([*cli, "copyright", "prepare", str(project), "--out", str(output / "copyright-case"),
              "--name", "安装验收示例", "--version", "0.0.0"], output, records)
     return {"modules": modules, "version": importlib.metadata.version("word-skills"),
+            "patent_renderers": patent_renderers,
             "delivery_state": manifest["state"], "pages": manifest.get("renderer", {}).get("pages"),
             "preview_executed": preview, "semantic_review": "not performed",
             "visual_review": "not performed", "fixture": "synthetic, not writing-quality evidence",

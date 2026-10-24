@@ -59,6 +59,8 @@
 
 默认未切换：上游对缺图/坏公式的严格拒绝，与现有「非 `--strict` 草稿允许占位句继续出稿、`--force` 可强制」的契约冲突（示例稿件本身含未登记图件的附图说明）。切换默认路径需要先决定是否改变该契约，并在 Word/WPS 客户端复核。已知限制：外观设计不支持；`latex2mathml` 对部分畸形 LaTeX 仍会产出公式对象（不是回退，门禁无法判定数学语义）；LibreOffice 中块级公式的可见位置与 Word 可能不同；未做 Word/WPS 编辑往返、复杂公式全集和正式提交兼容验收。
 
+安装态验收：`tools/check_installed_delivery.py` 于仓库外安装的 wheel 环境中，用纯文本发明稿分别执行默认本地制作器与 `--renderer upstream`，校验固定 commit/原件哈希、A4 版面、权利要求书/说明书/说明书摘要三类文书、正文标记以及默认路径仍为本地。CI 的 Linux 3.10/3.12、Windows 3.12 矩阵和隔离 wheel 任务都会执行该步骤；本机沙箱里仓库外可写目录受限，本地执行时用工作区内的仓库外目录模拟同一流程。
+
 试跑使用Codex随附Python 3.12、python-docx 1.2.0；latex2mathml 3.81.1、PyYAML 6.0.3当时仅装在本机忽略的 `.agent/evidence/patent-render-trial-20261024/deps/`，不修改当时的项目虚拟环境或发行依赖；第 30 轮接入后 latex2mathml 与 docxcompose 已列入 pyproject 运行依赖。证据同目录保存源SHA256清单、fixture、运行命令/日志、21份生成物、PDF/页面、对象与哨兵检查、3个负例；脚本为 `fetch.py`、`trial.py`、`render_trial.py`、`negative.py` 和 `audit.py`。首轮PDF文字提取因捆绑Poppler不含pdftotext而失败，改用随附pypdf后全部完成，未把失败写成第一次即通过。计划附图生成器只下载审查，图中采用预先制作的合成图，不宣称自动制图链已验收。
 
 ## 软著材料
