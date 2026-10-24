@@ -156,7 +156,7 @@ oh-my-patent build 稿件.md -o 申请文件/ --split               # 每个部�
 
 `handoff` 与 `build` 使用同一个 `--renderer` 选择（默认 `auto`），并在交接包 `manifest.json` 的 `renderer` 字段记录实际使用的制作器；如需旧版面仍可显式 `--renderer local`。官方 XML 转换兼容性尚未验证。
 
-限制：外观设计不走该路径；`latex2mathml`、`docxcompose` 为运行依赖；未做 Word/WPS 编辑往返与正式提交验收。固定原件、边界差异与验证范围见 [复用决策](docs/upstream-reuse.md)。
+限制：外观设计不走该路径；`latex2mathml`、`docxcompose` 为运行依赖；WPS 12.1 已完成打开/导出/编辑往返，Word 在本机不可用；官方 XML 转换与正式提交仍未验证。固定原件、边界差异与验证范围见 [复用决策](docs/upstream-reuse.md)。
 
 ## 验证
 
