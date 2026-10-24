@@ -1,6 +1,6 @@
 # oh-my-word / word-skills
 
-`word-skills` 是一个可安装的 Word Skills monorepo：它把中文技术文档制作、可追溯的 Word 交付和既有中国专利审阅稿工具放在同一套可验证的来源、渲染与交付边界中。
+`word-skills` 是面向中文领域写作的 Skills monorepo。技术报告、软著材料和专利初稿以写作方法、规范、案例和审阅标准为核心；项目分析、程序校验、Word/PDF 制作及 RAG 按需选用。
 
 当前实现包括：
 
@@ -13,9 +13,21 @@
 
 项目申报与软件著作权已接入 CLI 和共享交付链。附带的 NSFC Profile 只用于过期历史案例，不能当作当前开放渠道；真实申请仍须当期官方指南、申请人资料及人工核查。目标架构和能力边界见 [docs/02-architecture.md](docs/02-architecture.md)、[docs/03-roadmap.md](docs/03-roadmap.md) 和 [registry/skills.yaml](registry/skills.yaml)。
 
-## 安装
+## 先使用领域 Skill
 
-需要 Python 3.10+。基础安装包含专利和技术文档的结构检查、Word 生成与来源校验；读取 DOCX/PDF 材料和插槽模板使用可选依赖。
+保留完整仓库及相对资源，读取对应入口即可进行文本起草与审阅，不需要先安装 Python 后端或接入 RAG。由 Agent 实际读取任务材料和有关来源，交付文本、依据及缺口；这不产生工具的定稿状态。
+
+| 任务 | 入口 | 写前固定来源与阅读范围 |
+| --- | --- | --- |
+| 技术报告、设计说明 | [技术文档 Skill](skills/oh-my-technology/SKILL.md) | [Google/NASA 写法及本案官方技术资料](skills/oh-my-technology/references/domain-sources.md) |
+| 软著业务说明、手册、填写辅助 | [软著 Skill](skills/oh-my-copyright/SKILL.md) | [国家版权局、版权中心及固定 Fokkyp 方法](skills/oh-my-copyright/references/domain-sources.md) |
+| 专利交底、草稿及支持复核 | [专利 Skill](skills/oh-my-patent/SKILL.md) | [WIPO 中文手册、中国法/细则/指南修改](skills/oh-my-patent/references/domain-sources.md) |
+
+写新稿前实际阅读适用章节；同案修改复用已读版本，只补查变化。固定入口不足时按 [共用阅读规则](shared/references/source-reading.md) 限定官方来源进一步定位。网页受限或无浏览能力时保留未读项，不能把链接存在当作已核验。规则、范例和项目事实分开；固定阅读不是查新或生成质量保证。
+
+## 可选工具安装
+
+选择本项目程序校验或文件制作时需要 Python 3.10+。基础安装包含专利和技术文档的结构检查、Word 生成与来源校验；读取 DOCX/PDF 材料和插槽模板使用可选依赖。
 
 ```powershell
 python -m pip install -e ".[dev,ingest,templates]"
@@ -62,7 +74,7 @@ python -m word_skills route "请准备项目申报书" --json
 
 ## 技术文档与 Word 交付
 
-将 `skills/oh-my-technology/SKILL.md` 和 `skills/word-document/SKILL.md` 交给 Agent，阅读来源后填写 JSON 中间稿和证据账本，再运行：
+仅写作或审阅正文时使用上方领域 Skill。需要本项目制作 Word/PDF 时，再读取 `skills/word-document/SKILL.md` 和相应工具流程，填写 JSON 中间稿、证据账本后运行：
 
 ```powershell
 python -m word_skills ingest "项目材料路径" --case "case"
