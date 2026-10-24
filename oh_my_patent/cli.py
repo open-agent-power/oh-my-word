@@ -29,7 +29,8 @@ from .lint import lint
 from .gate import final_issues, review_skeleton
 from .report import LintReport
 from .handoff import create_handoff
-from .render import render_docx
+from .render import render_docx_selected, upstream_identity
+from .render import UpstreamRenderError
 from .schema import PatentDraft, PatentType
 from .spec import (
     BODY_FONT_SIZE_PT,
@@ -125,6 +126,19 @@ def _add_render_options(sub: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_renderer_option(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument(
+        "--renderer",
+        choices=("auto", "local", "upstream"),
+        default="auto",
+        help=(
+            "专利 DOCX 制作器：auto=发明/实用新型用固定上游转换器+本项目边界版式，"
+            "外观设计用本地排版（默认）；local=强制本地排版；upstream=强制上游（外观设计会拒绝）。"
+            "上游对缺图、坏公式、普通括号 LaTeX 明确失败；草稿占位稿请用 --renderer local"
+        ),
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         prog="oh-my-patent",
@@ -153,16 +167,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_build.add_argument("--final", action="store_true", help="执行事实与内容审查门禁；仅表示审阅交付就绪")
     p_build.add_argument("--facts", help="TECH_FACTS.json 路径")
     p_build.add_argument("--review", help="content-review.json 路径")
-    p_build.add_argument(
-        "--renderer",
-        choices=("auto", "local", "upstream"),
-        default="auto",
-        help=(
-            "专利 DOCX 制作器：auto=发明/实用新型用固定上游转换器+本项目边界版式，"
-            "外观设计用本地排版（默认）；local=强制本地排版；upstream=强制上游（外观设计会拒绝）。"
-            "上游对缺图、坏公式、普通括号 LaTeX 明确失败；草稿占位稿请用 --renderer local"
-        ),
-    )
+    _add_renderer_option(p_build)
     _add_render_options(p_build)
 
     p_review = sub.add_parser("review-init", help="生成待完成内容审查骨架，不自动判定通过")
@@ -175,6 +180,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_handoff.add_argument("--review", required=True)
     p_handoff.add_argument("-o", "--output", required=True)
     p_handoff.add_argument("--type", choices=sorted(_TYPE_CHOICES))
+    _add_renderer_option(p_handoff)
     _add_render_options(p_handoff)
 
     # ---- lint ----
@@ -311,31 +317,30 @@ def cmd_build(args: argparse.Namespace) -> int:
         )
         return 2
 
-    renderer = getattr(args, "renderer", "auto")
     # --json 时 stdout 只保留机器可读 JSON；制作器与产物信息走 stderr。
     console = sys.stderr if args.json else sys.stdout
-    if renderer == "auto":
-        # 外观设计没有对应的上游四文书模型，继续使用本地受控排版。
-        renderer = "local" if draft.patent_type is PatentType.DESIGN else "upstream"
-    if renderer == "upstream":
-        from .render import UpstreamRenderError, render_docx_upstream, upstream_identity
-
-        try:
-            written = render_docx_upstream(draft, args.output, options=options, split=args.split)
-        except UpstreamRenderError as exc:
-            print(
-                "上游制作器拒绝生成（默认 auto 对发明/实用新型使用固定上游；"
-                f"如需含占位句的草稿审阅稿请加 --renderer local）：{exc}",
-                file=sys.stderr,
-            )
-            return 2
+    try:
+        written, renderer_used = render_docx_selected(
+            draft,
+            args.output,
+            options=options,
+            split=args.split,
+            renderer=getattr(args, "renderer", "auto"),
+        )
+    except UpstreamRenderError as exc:
+        print(
+            "上游制作器拒绝生成（默认 auto 对发明/实用新型使用固定上游；"
+            f"如需含占位句的草稿审阅稿请加 --renderer local）：{exc}",
+            file=sys.stderr,
+        )
+        return 2
+    if renderer_used == "upstream":
         identity = upstream_identity()
         print(
             f"上游制作器：handsomestWei@{identity['commit'][:7]}（{len(identity['files'])} 份原件哈希已校验）",
             file=console,
         )
     else:
-        written = render_docx(draft, args.output, options=options, split=args.split)
         print("本地制作器：受控 OOXML 排版（--renderer local）", file=console)
     if knowledge:
         from word_skills.knowledge_context import record_patent_context
@@ -370,8 +375,20 @@ def cmd_handoff(args):
     if not report.ok:
         print(report.render())
         return 2
-    path = create_handoff(args.draft, draft, args.facts, args.review, args.output, options)
-    print(f"已生成官方转换交接包：{path}；XML 转换待完成，尚未提交。")
+    try:
+        path, renderer_used = create_handoff(
+            args.draft,
+            draft,
+            args.facts,
+            args.review,
+            args.output,
+            options,
+            renderer=getattr(args, "renderer", "auto"),
+        )
+    except UpstreamRenderError as exc:
+        print(f"上游制作器拒绝生成交接包（可加 --renderer local）：{exc}", file=sys.stderr)
+        return 2
+    print(f"已生成官方转换交接包：{path}（制作器：{renderer_used}）；XML 转换待完成，尚未提交。")
     return 0
 
 

@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 
 from .gate import sha256
-from .render import render_docx
+from .render import render_docx_selected
 
 
 INSTRUCTIONS = """# 官方 XML 转换与提交核对
@@ -26,7 +26,7 @@ INSTRUCTIONS = """# 官方 XML 转换与提交核对
 """
 
 
-def create_handoff(draft_path, draft, facts_path, review_path, output, options):
+def create_handoff(draft_path, draft, facts_path, review_path, output, options, renderer="auto"):
     options.validate()
     output = Path(output).resolve()
     if output.exists():
@@ -35,7 +35,9 @@ def create_handoff(draft_path, draft, facts_path, review_path, output, options):
     with tempfile.TemporaryDirectory(prefix=".patent-", dir=output.parent) as temp:
         root = Path(temp) / "package"
         root.mkdir()
-        render_docx(draft, root / "review-docx", options=options, split=True)
+        _, renderer_used = render_docx_selected(
+            draft, root / "review-docx", options=options, split=True, renderer=renderer
+        )
         evidence = root / "evidence"
         evidence.mkdir()
         shutil.copyfile(draft_path, evidence / ("draft" + Path(draft_path).suffix))
@@ -66,7 +68,8 @@ def create_handoff(draft_path, draft, facts_path, review_path, output, options):
         (root / "CONVERT-AND-CHECK.md").write_text(INSTRUCTIONS, encoding="utf-8")
         manifest = {"schema_version": 1, "tool_version": "0.2.0", "status": "official_conversion_pending",
                     "filing_status": "not_submitted", "draft_sha256": sha256(draft_path),
+                    "renderer": renderer_used,
                     "files": [{"path": p.relative_to(root).as_posix(), "sha256": sha256(p)} for p in sorted(root.rglob("*")) if p.is_file()]}
         (root / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         root.rename(output)
-    return output
+    return output, renderer_used

@@ -67,13 +67,19 @@
 
 据此把默认制作器改为 `auto`：发明/实用新型使用固定上游转换器，外观设计回落本地；不可用稿（缺图、公式回退、无 OMML、裸括号 LaTeX）默认**明确失败并提示 `--renderer local`**，不自动回退、不改变交付状态。`--renderer local` 保留用于含占位句的草稿审阅稿，旧命令与参数不变。该行为由 `tests/test_patent_upstream_render.py` 与 `tests/test_knowledge_context.py`（共 28 项相关用例）以及安装态 `tools/check_installed_delivery.py` 固化，并随 CI 三平台矩阵执行。
 
-仍然成立的限制：Word/WPS 编辑往返、复杂公式全集、真实案卷与正式提交兼容未验证；本机渲染只覆盖 LibreOffice 26.8，块级公式可见位置可能与 Word 不同；外观设计不支持该路径。本轮只切换 `build`；`handoff` 仍显式使用本地排版（官方 XML 转换兼容未验证），两者是否统一留作后续轮次。
+仍然成立的限制：Word/WPS 编辑往返、复杂公式全集、真实交底材料与正式提交兼容未验证；本机渲染只覆盖 LibreOffice 26.8，块级公式可见位置可能与 Word 不同；外观设计不支持该路径。第 34 轮已让 `handoff` 与 `build` 共用同一制作器选择，并在交接包 `manifest.json` 记录实际制作器；官方 XML 转换兼容性仍未验证。
 
 ### 2026-10-24 第 33 轮：完整验证与修复
 
 对默认 `auto` 路径做了选项矩阵与边界输入的完整验证：`--font / --font-size / --line-spacing / --page-numbers / --no-part-titles / --no-page-breaks / --subsection-style keep|flatten / --type / --split / --json / --renderer local|upstream` 逐项执行并核对产物；split 的 5 份文书（含说明书附图、摘要附图）全部实际渲染并查看；PNG/JPG 可嵌入，SVG 明确拒绝；表格转义竖线在边界还原为 `|`；知识绑定（`--knowledge`）与默认 upstream 组合生成 receipt 并实际走上游。
 
 验证中发现并修复三处问题：`--json` 的 stdout 被制作器/产物提示污染、`--no-part-titles` 对说明书附图文书无效、表格单元格转义竖线残留反斜杠；另修正 `latex2mathml` 的许可文案（MIT，不是 MIT-0）。新增选项矩阵、JSON 纯净性、JPG/SVG、转义竖线、知识绑定等回归测试。
+
+### 2026-10-24 第 34 轮：公开真实文本试跑与 handoff 对齐
+
+用公开授权专利 **CN110008257B**（Google Patents 页面 + 同号公开 PDF）做真实文本试跑：17 项权利要求（约 4.5k 字）、说明书约 24.5k 字、摘要与 2 幅公开附图（从公开附图页裁切、去掉印刷图号）。经默认 `auto` 上游制作生成 32 页 A4 文档并逐页查看：全部 17 项权利要求、首/末哨兵、摘要与说明书末段均可在 PDF 中定位，无截断；A4、黑色标题、无自动编号、附图可见。该试跑只证明真实公开文本的渲染与分页，**不是真实交底、写作质量或业务/提交验收**；公开文本与附图仅保存在本机忽略目录，不进入仓库。
+
+`handoff` 改为与 `build` 共用 `render_docx_selected`（auto/local/upstream），交接包 `manifest.json` 新增 `renderer` 字段；发明默认上游、外观设计本地、`--renderer local` 保留。官方 XML 转换兼容性仍未验证。
 
 试跑使用Codex随附Python 3.12、python-docx 1.2.0；latex2mathml 3.81.1、PyYAML 6.0.3当时仅装在本机忽略的 `.agent/evidence/patent-render-trial-20261024/deps/`，不修改当时的项目虚拟环境或发行依赖；第 30 轮接入后 latex2mathml 与 docxcompose 已列入 pyproject 运行依赖。证据同目录保存源SHA256清单、fixture、运行命令/日志、21份生成物、PDF/页面、对象与哨兵检查、3个负例；脚本为 `fetch.py`、`trial.py`、`render_trial.py`、`negative.py` 和 `audit.py`。首轮PDF文字提取因捆绑Poppler不含pdftotext而失败，改用随附pypdf后全部完成，未把失败写成第一次即通过。计划附图生成器只下载审查，图中采用预先制作的合成图，不宣称自动制图链已验收。
 

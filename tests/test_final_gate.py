@@ -188,6 +188,17 @@ class FinalGateTest(unittest.TestCase):
         self.assertEqual(manifest['filing_status'], 'not_submitted')
         for item in manifest['files']:
             self.assertEqual(item['sha256'], sha256(handoff / item['path']))
+        # handoff 与 build 共用默认 auto：发明稿走固定上游，并在 manifest 记录实际制作器。
+        self.assertEqual(manifest['renderer'], 'upstream')
+        claims_docx = next((handoff / 'review-docx').glob('*权利要求书.docx'))
+        self.assertEqual(Document(str(claims_docx)).paragraphs[0].style.name, 'Heading 1')
+        local_handoff = self.root / 'handoff-local'
+        self.assertEqual(
+            self.cli('handoff', str(self.path), '-o', str(local_handoff), *args, '--renderer', 'local'),
+            0,
+        )
+        local_manifest = json.loads((local_handoff / 'manifest.json').read_text(encoding='utf-8'))
+        self.assertEqual(local_manifest['renderer'], 'local')
         self.assertEqual(self.cli('handoff', str(self.path), '-o', str(handoff), *args), 1)
 
     def test_malformed_review_is_error(self):
