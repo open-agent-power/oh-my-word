@@ -8,10 +8,13 @@
 |---|---|---|---|
 | [Fenng/Tech-Doc-Style-Chinese](https://github.com/Fenng/Tech-Doc-Style-Chinese/tree/b119d01c9bb7cd132b3c62fafdff34227c4410d1) | [MIT](third_party/licenses/fenng-MIT.txt) | shared/references/chinese-writing.md | 精简为事实保真、术语和机器标识符原则，不继承个人标点偏好 |
 | [riekelt/technical-writer](https://github.com/riekelt/technical-writer/tree/85e53729dd959a2795d593d6769068e342cf3486) | [MIT](third_party/licenses/technical-writer-MIT.txt) | skills/oh-my-technology/references/design-spec.md、technical-report.md | 改编事实/提案区分、设计取舍、受众/目的先行、逐结论来源及按缺陷最小修订；不复制英文文风限制 |
+| [handsomestWei/patent-disclosure-skill](https://github.com/handsomestWei/patent-disclosure-skill/tree/6935a14d342ed9c7a07440c999d1b7bf1852a701) | [MIT](third_party/licenses/patent-disclosure-MIT.txt) | skills/oh-my-patent/references/drafting-method.md | 选择性适配交底到各文稿部分的材料映射及逐权项/实施方式/附图对照；不引入其执行代码、目录/YAML协议、固定对比文件数或交付政策 |
 
 以上实际改编项及运行依赖版本记录在 [upstream.lock.json](upstream.lock.json)，并保留完整许可证。
 
 2026-10-24 技术写作参考另提供 [Google Audience](https://developers.google.com/tech-writing/one/audience)、[Documents](https://developers.google.com/tech-writing/one/documents) 的阅读入口，不复制课程（页面通常为 CC BY 4.0，例外依原页）。报告组织与审阅方法参考 Carol A. Vidoli，1992，[NASA-TM-105419](https://ntrs.nasa.gov/citations/19930013813)；原始记录标注美国政府作品、允许公共使用。新增示意案例为本项目编写，不代表实验结果；未引入两者代码、图像或行政要求。
+
+专利方法参考：世界知识产权组织（2023），[《产权组织专利撰写手册》第二版中文PDF](https://www.wipo.int/edocs/pubdocs/zh/wipo-pub-867-23-zh-wipo-patent-drafting-manual.pdf)，[出版记录](https://www.wipo.int/publications/en/details.jsp?id=4706)，[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)。来源页按章节路由，本地方法页由本项目选择、概括及适配，不是官方背书或对中国规则的替代，不复制其商标/图像。依原文要求：“对于原始内容的转换或翻译，产权组织秘书处不承担任何责任。”官方规则按来源页引用原文，不整篇收录；自编示意与官方案例分开。
 
 ## 方法参考，未复制源码或文案
 
