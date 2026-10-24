@@ -37,4 +37,4 @@ word-skills route "只调整 Word 页眉和页码"
 word-skills patent template invention -o outputs/draft.md
 ```
 
-需要技术文档或 Word 产物时，继续读取被选技能的 references 和工具流程。需要专利时保留旧的 `python tools/patent.py ...` 与 `oh-my-patent ...` 入口；总入口只是兼容调度器，不改变既有专利门禁。
+先读取被选技能的写法和来源参考；是否使用工具按本次产物和该技能支持的路径决定。需要 Word 或结构校验时再读对应工具流程。需要专利工具时保留旧的 `python tools/patent.py ...` 与 `oh-my-patent ...` 入口；总入口只是兼容调度器，不改变既有专利门禁。

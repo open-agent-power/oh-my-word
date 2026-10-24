@@ -90,13 +90,17 @@
       "commit": "85e53729dd959a2795d593d6769068e342cf3486",
       "license": "MIT",
       "source_files": [
-        "plugins/technical-writer/skills/writing-design-docs/SKILL.md"
+        "plugins/technical-writer/skills/writing-design-docs/SKILL.md",
+        "plugins/technical-writer/skills/technical-writing/SKILL.md",
+        "plugins/technical-writer/skills/technical-writing/references/truth.md",
+        "plugins/technical-writer/skills/reviewing-technical-prose/SKILL.md"
       ],
       "license_file": "third_party/licenses/technical-writer-MIT.txt",
       "destination_files": [
-        "skills/oh-my-technology/references/design-spec.md"
+        "skills/oh-my-technology/references/design-spec.md",
+        "skills/oh-my-technology/references/technical-report.md"
       ],
-      "adaptation": "Condensed the distinction between observed facts and proposals, and the review of choices, costs and residual risks; did not adopt English style constraints.",
+      "adaptation": "Condensed facts versus proposals, choices and residual risks; added audience/purpose framing, claim-to-source review and defect-based minimal revision for technical reports. Did not adopt English style constraints or upstream tools.",
       "verification": "Destination and attribution reviewed; no upstream executable code imported."
     }
   ],

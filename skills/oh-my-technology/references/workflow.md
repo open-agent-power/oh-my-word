@@ -1,5 +1,7 @@
 # 工具流程
 
+仅在选择本项目的结构校验或 Word/PDF 制作时使用本页。正文起草与审阅可以直接按领域写法进行，不需要安装这些依赖；进入本页后原有 JSON、证据、渲染和审阅要求仍须满足。
+
 从本技能文件向上三级找到仓库根目录；完整目录安装是当前受支持形态，不能只复制 SKILL.md。用可用 Python 3.10+ 安装 `pip install -e ".[ingest,templates]"`；外部程序需要 LibreOffice 和 Poppler。Codex 桌面环境优先使用其 bundled Python；命令示例中的 `python` 替换为实际解释器。工具不会自动下载外部程序。
 
 ```text
