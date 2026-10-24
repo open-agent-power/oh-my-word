@@ -1,6 +1,6 @@
 # 上游复用决策
 
-更新于2026-10-24。本文件集中记录执行能力的主要实现和复用取舍；产品术语与完成含义见 [共用契约](06-contracts-and-states.md)。实际采用的固定提交、许可证及落点以 [来源锁定](../upstream.lock.json) 和 [第三方记录](../THIRD_PARTY.md) 为准。候选只读核查不成为已接入依赖，原件/调用检查不证明写作质量优于上游。
+更新于2026-10-24。本文件集中记录执行能力的主要实现和复用取舍；产品术语与完成含义见 [共用契约](06-contracts-and-states.md)。实际采用的固定提交、许可证及落点以 [来源锁定](../upstream.lock.json) 和 [第三方记录](../THIRD_PARTY.md) 为准。候选核查或隔离试跑不等于已接入依赖，原件/调用检查不证明写作质量优于上游。
 
 ## 执行能力的主要实现
 
@@ -14,23 +14,42 @@
 | 软著源码身份与选段 | 上游候选由 Agent 选择，`copyright_package.apply_selection` 投影为本地原件哈希和行段；`copyright.py` 校验 | 一份选择，两种用途的投影；不再独立生成第二份业务选择。上游源码抽取仅保留依赖，不负责最终分页 |
 | 手册结构转为通用稿件 | `copyright_manual.py` 调用成熟的 markdown-it-py，将章节、表格、命令和声明图片投影到现有 v1 | 保留适配器，不自造Markdown解析器；不引入上游另一套Word执行器 |
 | 技术/软著Word及通用交付 | `word_skills/render.py` / `delivery.py`，复用 python-docx、可选 docxtpl、外部预览工具 | 继续使用该制作链；页面、内容及业务审阅分别记录，不能由导出成功代替 |
-| 专利Word与交接 | `word_skills/legacy_patent.py` 只转发到原 CLI；`oh_my_patent/render/docx.py` 与原 gate/handoff 负责专利稿件 | 保留原专利模型和交付门禁；不会因共用产品术语就迁移所有案件或互认 reviewed |
+| 专利Word与交接 | `word_skills/legacy_patent.py` 只转发到原 CLI；`oh_my_patent/render/docx.py` 与原 gate/handoff 负责专利稿件 | 已试跑上游转换器，方向改为优先复用其制作模块；原版未满足替换条件，默认路径暂不切换。保留模型及外层交付门禁不要求继续使用原排版实现，详见下方实测 |
 | 知识定位 | 固定原文直接阅读，必要时调用已有 knowledge/context 和RAGFlow适配 | 保持可选；不再建检索服务或新的自动事实库 |
 
 外部工具输入输出由适配器在边界转换。适配器可以增加明确的本地事实/安全约束，但不静默改原文、捏造确认、重写上游版本或把候选扫描结果变成事实。Fokkyp 当前存在多个内部函数钩子，不能仅因代码叫适配器就当作零维护：后续升级须固定版本，核对签名、默认值、失败行为和相应回归。
 
-## 专利执行代码候选：已读接口，未执行对照
+## 专利执行代码候选与制作器实测
 
-固定来源为 [handsomestWei/patent-disclosure-skill，6935a14d342ed9c7a07440c999d1b7bf1852a701](https://github.com/handsomestWei/patent-disclosure-skill/tree/6935a14d342ed9c7a07440c999d1b7bf1852a701)，其原 MIT 许可已随已采用的方法保留。下面四份代码于本次实际读取；尚未在本项目执行，没有新增依赖或上游执行器。后续导入代码还需核对其依赖许可及实际行为。
+固定来源为 [handsomestWei/patent-disclosure-skill，6935a14d342ed9c7a07440c999d1b7bf1852a701](https://github.com/handsomestWei/patent-disclosure-skill/tree/6935a14d342ed9c7a07440c999d1b7bf1852a701)，其原 MIT 许可已随已采用的方法保留。前一轮实际读取下面四份接口；用户随后同意完整制作模块试跑，现已在忽略的证据目录执行未修改的 `emit_application_docx.py`、`md_to_docx.py` 及其公式/分隔符辅助模块。支持检查和计划附图生成仍未执行；生产依赖、默认后端和交付状态均未改变。后续导入代码还需核对其依赖许可及实际行为。
 
 | 固定源码 | 已核对的接口/限制 | 取舍及最小验证条件 |
 | --- | --- | --- |
 | [check_support.py](https://github.com/handsomestWei/patent-disclosure-skill/blob/6935a14d342ed9c7a07440c999d1b7bf1852a701/skills/patent-application/tools/check_support.py) | 读取分开的权利要求/说明书/摘要文件及图件计划/件号表；依赖同包词库、图件规划与标号检查。步骤标签和名称等为机械比对，源码明确语义仍需人工判断 | 暂不整体替换现有支持/内容门禁。将来对接已有稿件时先验证真实不一致能被发现、缺少图件计划时覆盖范围明确，再决定替换对应机械检查或补足不同职责 |
-| [emit_application_docx.py](https://github.com/handsomestWei/patent-disclosure-skill/blob/6935a14d342ed9c7a07440c999d1b7bf1852a701/skills/patent-application/tools/emit_application_docx.py) | 按固定四类文件名调用同包 md_to_docx，含公式分隔符预检；与本地单稿解析/拆分、证据和final流程的接口不同 | 本次不引入另一套Word链。只有具体文书能力缺口和实际导出/审阅证据支持时才评估替换；不因示例好看选作胜者 |
-| [math_to_omml.py](https://github.com/handsomestWei/patent-disclosure-skill/blob/6935a14d342ed9c7a07440c999d1b7bf1852a701/skills/patent-application/tools/math_to_omml.py) | 使用 latex2mathml 将LaTeX经MathML转为可挂载的OMML元素；try入口失败返回None，调用方负责回退。本地所查专利正文写入路径未调用同类LaTeX到OMML生成器；已有OMML输入提取不是同一能力 | 优先列为独立复用候选，不新写转换器。验证代表公式的符号/上下标/单位保真、可编辑性和复杂宏失败可见性；证明可用后才接现有制作入口，依赖仅在选用时启用 |
+| [emit_application_docx.py](https://github.com/handsomestWei/patent-disclosure-skill/blob/6935a14d342ed9c7a07440c999d1b7bf1852a701/skills/patent-application/tools/emit_application_docx.py) | 按固定四类文件名调用同包 md_to_docx，含公式分隔符预检；与本地单稿解析/拆分、证据和final流程的接口不同 | 已完整试跑三组合成稿，优先整体复用制作模块。接口差异作为薄适配处理；原版的版式和失败策略未通过替换条件，不能仅按退出码切默认后端 |
+| [math_to_omml.py](https://github.com/handsomestWei/patent-disclosure-skill/blob/6935a14d342ed9c7a07440c999d1b7bf1852a701/skills/patent-application/tools/math_to_omml.py) | 使用 latex2mathml 将LaTeX经MathML转为可挂载的OMML元素；try入口失败返回None，调用方负责回退。本地所查专利正文写入路径未调用同类LaTeX到OMML生成器；已有OMML输入提取不是同一能力 | 已随完整转换器实跑：代表稿中生成4个可编辑公式对象，另测无效公式退回原文。对象存在不证明所有数学语义和复杂宏保真；复用完整转换器并在外层拦截不允许的回退，不重写转换器 |
 | [render_invention_figures.py](https://github.com/handsomestWei/patent-disclosure-skill/blob/6935a14d342ed9c7a07440c999d1b7bf1852a701/skills/patent-application/tools/render_invention_figures.py) | 读取YAML/JSON计划生成黑白SVG，PNG路径使用Playwright及可用浏览器；退出成功可仅表示SVG已生成。本地专利渲染器主要嵌入已登记图件 | 优先列为图件生成候选。验证所需图型、标签/连线、技术对应和实际版面；若任务需PNG，额外核对PNG结果，不能只看退出码。通过后复用该模块，不再另写绘图器 |
 
-排序依据是已观察到的能力差异和接入边界，不是质量排名。此轮只交付取舍表；候选验证按具体任务另设焦点，不自动安装浏览器、LaTeX转换依赖或运行模型实验。保留现有后端是有范围的当前决定，不是永久拒绝替换。
+排序依据是已观察到的能力差异和接入边界，不是质量排名。接口核查轮仅交付取舍表；后续获准试跑只在证据目录装入小型依赖，没有安装浏览器或运行模型实验。原后端继续可用是替换条件尚未满足，不是永久拒绝复用。
+
+### 2026-10-24 同内容制作对照
+
+本地实现身份为 `9d116c3b1d3daa0b874b835dab694eb46583070d`，上游为上述固定原件，未打补丁。使用三组明确标注的合成材料：普通文字、公式表格、已存在的附图加长文。正文来自同一组字段，分别投影到本地 PatentDraft 和上游分文书 Markdown；标题、章节外观和自动附图说明属于各自的接口表现，不是逐字相同的输入文件。没有运行模型写作，也不把合成稿当作原创交底或真实申请。
+
+普通文字和公式组两侧各生成3份文书；附图组本地生成5份、上游生成4份，共21份DOCX。实际用 `render_docx.py`、LibreOffice 26.8.1.1及Poppler渲染6份说明书和2份附图，共13页；逐页联系表和关键整页均已查看。正文定位标记与长文30个片段/结尾均在PDF中找到，未检出页面外字符；这只是哨兵与页面边界检查，不是全文语义等价认证。所有权利要求、摘要文书仅生成并检查对象，未全部渲染，也未在Word/WPS客户端验收。
+
+| 项目 | 本地现有制作器 | 上游未修改制作器 | 结论 |
+| --- | --- | --- | --- |
+| 普通文字 | A4、黑色标题，1页 | Letter、蓝色标题，1页 | 原版版式不能直接替换；页数相同不代表样式相同 |
+| 公式与表格 | 1张表，LaTeX按原文显示，0个OMML对象 | 1张表，4个OMML对象，LibreOffice中可见公式结构 | 上游在这组公式上有明确能力收益；已核对原生公式结构及显示，未做Word/WPS编辑往返，不代表复杂公式全覆盖 |
+| 长文与已有附图 | 说明书4页，附图1页、1张图；另生成摘要附图 | 说明书3页，附图1页、1张图；默认4文书入口未另生成摘要附图 | 两侧未见本组文字截断，图件均可见；字号、纸张和行距不同，不能把页数减少当作质量提高 |
+| 无效公式负例 | 本轮不对其失败策略排名 | `emit_application_docx.py` 返回0，正文仍为原始LaTeX，stderr为空 | 外层必须读取公式结果/产物，不能信任退出码 |
+| 缺图负例 | 本轮不对其失败策略排名 | 返回0，产物写入“图片缺失”标记 | 制作完成前必须明确拒绝缺图或保留不完整草稿状态 |
+| 普通括号误写LaTeX负例 | 本轮不对其失败策略排名 | 返回1，拒绝该文书并输出定位 | 该检查可直接复用，不能据此推断所有公式错误都会拦截 |
+
+决定：**优先复用上游完整转换模块，补薄适配并核验后再切换默认制作路径。** 不再以“接口不同”或已有测试数量作为保留自有排版的理由。接入前的具体缺口是：沿用现有A4/黑色标题等制作配置；显式拦截不允许的公式退回和缺图；映射现有文书/摘要附图、来源与选用参数，并保留外层审阅/交接。旧案卷兼容不要求保留旧排版算法。以上适配尚未进入生产路径，不能称为已切换或整体评测通过。
+
+试跑使用Codex随附Python 3.12、python-docx 1.2.0；latex2mathml 3.81.1、PyYAML 6.0.3仅装在本机忽略的 `.agent/evidence/patent-render-trial-20261024/deps/`，不修改项目虚拟环境或发行依赖。证据同目录保存源SHA256清单、fixture、运行命令/日志、21份生成物、PDF/页面、对象与哨兵检查、3个负例；脚本为 `fetch.py`、`trial.py`、`render_trial.py`、`negative.py` 和 `audit.py`。首轮PDF文字提取因捆绑Poppler不含pdftotext而失败，改用随附pypdf后全部完成，未把失败写成第一次即通过。计划附图生成器只下载审查，图中采用预先制作的合成图，不宣称自动制图链已验收。
 
 ## 软著材料
 
