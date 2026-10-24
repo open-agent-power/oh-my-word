@@ -90,6 +90,14 @@
 - 编辑往返：WPS 打开→另存 DOCX 后段落数 181、Heading 1 标题、A4、字号 22/16/12、eastAsia 宋体、两幅图件均保持；LibreOffice 重渲染仍 32 页且末项权利要求可定位。插入文本后另存，标记可被 python-docx 读回，结构未损坏。WPS 另存会多一个空 `word/media/` ZIP 目录项，不影响解析。
 - Word 本机不可用：未发现 WINWORD.EXE 或 ClickToRun，`Word.Application` 无本地服务器（早期自动化挂起）。因此 **Word 客户端、官方 XML 转换、正式提交仍属未验证**；WPS 结果不能替代 Word 兼容结论，也不是业务验收。
 
+### 2026-10-24 第 36 轮：官方 WORD 转 XML 编辑器核查
+
+取得官方 **WORD 转 XML 编辑器 V4.3**（2025-12-18 安装包，公开下载；安装包与 MSI 的 sha256 记录在证据目录）及 WPS/Word 手册、五书模板、官方《文件格式建议》。官方要求 Windows 10+、Office 2013+ 或 WPS 2015 专业版+，需管理员安装；安装包内含 .NET、VC++、VSTO Runtime。
+
+本机**无法安装/运行**：会话非管理员；MSI 为 dual-mode，`ALLUSERS=2 MSIINSTALLPERUSER=1` 仍返回 1603；单独安装 VSTO 4.0 Runtime 同样 1603；`StartWord.exe` 依赖的 `App Paths`（wps.exe/Winword.exe）未注册。因此**官方 XML 生成、DTD 校验、五书标记、官方预览与提交均未验证**，没有伪造官方结果。
+
+按官方《文件格式建议》对 5 份 split 文书逐项核对：全部文字 run 显式宋体/Times New Roman；`numPr=0`、无行号/链接；图片全部 `wp:inline`、独立段落、不在表格内；PNG/JPG；A4；五书齐全；合成稿公式为 OMML。发现两处需注意：官方手册明确**摘要附图不再单独接收**，已在 `handoff` 交接说明中写明转换前删除；官方格式建议要求**公式后有标点且标点在公式外**，当前块级公式独立成段时没有尾随标点，记为写作/投影待办（未擅改正文）。官方工具内的标记、DTD、预览等专有步骤仍只能在装好工具的环境验证。
+
 试跑使用Codex随附Python 3.12、python-docx 1.2.0；latex2mathml 3.81.1、PyYAML 6.0.3当时仅装在本机忽略的 `.agent/evidence/patent-render-trial-20261024/deps/`，不修改当时的项目虚拟环境或发行依赖；第 30 轮接入后 latex2mathml 与 docxcompose 已列入 pyproject 运行依赖。证据同目录保存源SHA256清单、fixture、运行命令/日志、21份生成物、PDF/页面、对象与哨兵检查、3个负例；脚本为 `fetch.py`、`trial.py`、`render_trial.py`、`negative.py` 和 `audit.py`。首轮PDF文字提取因捆绑Poppler不含pdftotext而失败，改用随附pypdf后全部完成，未把失败写成第一次即通过。计划附图生成器只下载审查，图中采用预先制作的合成图，不宣称自动制图链已验收。
 
 ## 软著材料
