@@ -312,6 +312,8 @@ def cmd_build(args: argparse.Namespace) -> int:
         return 2
 
     renderer = getattr(args, "renderer", "auto")
+    # --json 时 stdout 只保留机器可读 JSON；制作器与产物信息走 stderr。
+    console = sys.stderr if args.json else sys.stdout
     if renderer == "auto":
         # 外观设计没有对应的上游四文书模型，继续使用本地受控排版。
         renderer = "local" if draft.patent_type is PatentType.DESIGN else "upstream"
@@ -329,18 +331,22 @@ def cmd_build(args: argparse.Namespace) -> int:
             return 2
         identity = upstream_identity()
         print(
-            f"上游制作器：handsomestWei@{identity['commit'][:7]}（{len(identity['files'])} 份原件哈希已校验）"
+            f"上游制作器：handsomestWei@{identity['commit'][:7]}（{len(identity['files'])} 份原件哈希已校验）",
+            file=console,
         )
     else:
         written = render_docx(draft, args.output, options=options, split=args.split)
-        print("本地制作器：受控 OOXML 排版（--renderer local）")
+        print("本地制作器：受控 OOXML 排版（--renderer local）", file=console)
     if knowledge:
         from word_skills.knowledge_context import record_patent_context
         record_patent_context(args.draft, written, knowledge, str(args.output) + ".knowledge.json")
-    print(f"已生成 {len(written)} 个审阅文件（正式电子申请需官方 XML 转换及核对）：")
+    print(
+        f"已生成 {len(written)} 个审阅文件（正式电子申请需官方 XML 转换及核对）：",
+        file=console,
+    )
     for path in written:
         size_kb = path.stat().st_size / 1024
-        print(f"  {path}  ({size_kb:.1f} KB)")
+        print(f"  {path}  ({size_kb:.1f} KB)", file=console)
     return 0
 
 

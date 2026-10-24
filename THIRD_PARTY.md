@@ -32,7 +32,7 @@
 |---|---|---|
 | python-docx | 1.2.0 | 直接依赖，MIT；DOCX 对象与样式 |
 | docxcompose | 1.4.1 | 直接依赖，MIT；通用模板子文档与上游专利多文书合并 |
-| latex2mathml | 3.81.1 | 直接依赖，MIT-0；上游专利制作器的 LaTeX→MathML→OMML |
+| latex2mathml | 3.81.1 | 直接依赖，MIT；上游专利制作器的 LaTeX→MathML→OMML |
 | docxtpl | 0.20.2 | 可选依赖，LGPL-2.1；受限插槽模板 |
 | MarkItDown | 0.1.8 | 可选依赖，MIT；本地 DOCX/PDF 摄入 |
 | PyYAML | 6.0.3 | 直接依赖，MIT；章节契约 |

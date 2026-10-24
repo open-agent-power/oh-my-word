@@ -146,7 +146,7 @@ def markdown_parts(
     if abstract:
         parts["abstract"] = abstract
 
-    drawings = _drawings_markdown(draft)
+    drawings = _drawings_markdown(draft, options)
     if drawings:
         parts["drawings"] = drawings
 
@@ -200,11 +200,11 @@ def _abstract_markdown(
     return _join(lines + content)
 
 
-def _drawings_markdown(draft: PatentDraft) -> str:
+def _drawings_markdown(draft: PatentDraft, options: RenderOptions) -> str:
     drawings = sorted(draft.drawings, key=lambda item: item.number)
     if not drawings:
         return ""
-    lines = [f"# {PART_TITLES['drawings']}"]
+    lines = [f"# {PART_TITLES['drawings']}"] if options.include_part_titles else []
     for drawing in drawings:
         if not drawing.path:
             raise UpstreamRenderError(
@@ -423,6 +423,22 @@ def _prepend_run(paragraph, text: str) -> None:
         first.addprevious(element)
 
 
+def _restore_table_pipes(document: Document) -> None:
+    """还原表格单元格里的转义竖线。
+
+    上游 ``_split_table_cells`` 会把 ``a \\| b`` 当作同一单元格内容，但把
+    反斜杠原样留在文字里；Word 里应显示为 ``a | b``。这里只在表格单元格内
+    还原，不影响正文的其它反斜杠。
+    """
+    for table in document.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        if "\\|" in run.text:
+                            run.text = run.text.replace("\\|", "|")
+
+
 def _apply_boundary_layout(document: Document, options: RenderOptions) -> None:
     """把上游用 Word 默认模板生成的文档改成本项目要求的版面。
 
@@ -432,6 +448,7 @@ def _apply_boundary_layout(document: Document, options: RenderOptions) -> None:
     """
     oxml.configure_document(document, options)
     _restore_literal_numbering(document)
+    _restore_table_pipes(document)
     western, east_asian = options.resolved_fonts()
 
     for name, (size, bold, alignment) in _HEADING_LAYOUT.items():

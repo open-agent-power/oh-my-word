@@ -137,3 +137,53 @@ def test_patent_split_receipt_and_existing_output_preserved(tmp_path, kb):
     before = {p: sha256(p) for p in output.rglob("*") if p.is_file()}
     assert patent(["build", str(draft), "-o", str(output), "--split", "--renderer", "local"]) != 0
     assert before == {p: sha256(p) for p in before}
+
+
+def test_patent_default_upstream_with_knowledge_binding(tmp_path, kb):
+    """默认 auto 的发明稿也走 knowledge receipt，且实际使用上游制作器。"""
+    import base64
+
+    from docx import Document
+    from oh_my_patent.cli import main as patent
+
+    draft, output = tmp_path / "upstream.md", tmp_path / "upstream.docx"
+    image = tmp_path / "figure.png"
+    image.write_bytes(base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    ))
+    assert patent(["template", "invention", "-o", str(draft), "--knowledge", str(kb)]) == 0
+    draft.write_text(
+        f'''---
+title: 一种绑定知识的上游样稿
+type: invention
+drawings:
+  - {{number: 1, caption: 结构图, path: {str(image).replace(chr(92), "/")}}}
+---
+
+# 权利要求书
+
+1. 一种绑定知识的上游样稿，其特征在于，包括采集记录。
+
+# 说明书
+
+【技术领域】
+
+本材料仅用于测试，标记KB_FIELD。
+
+【具体实施方式】
+
+步骤S101，采集记录，标记KB_END。
+
+# 摘要
+
+本材料仅用于测试，标记KB_ABS。
+''',
+        encoding="utf-8",
+    )
+    assert patent(["build", str(draft), "-o", str(output)]) == 0
+    receipt = read_json(Path(str(output) + ".knowledge.json"))
+    assert receipt["outputs"]
+    titles = [
+        p.text for p in Document(str(output)).paragraphs if p.style.name == "Heading 1"
+    ]
+    assert titles == ["权利要求书", "说明书", "说明书摘要", "说明书附图"]

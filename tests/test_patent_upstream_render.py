@@ -14,8 +14,10 @@ import base64
 import contextlib
 import hashlib
 import io
+import json
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 from docx import Document
@@ -438,6 +440,214 @@ class DefaultRendererTests(unittest.TestCase):
             self.assertTrue(local.is_file())
             body = "\n".join(p.text for p in Document(str(local)).paragraphs)
             self.assertIn("缺失", body)
+
+
+JPEG_BYTES = base64.b64decode(
+    "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA0JCgsKCA0LCgsODg0PEyAVExISEyccHhcgLikxMC4pLSwzOko+MzZGNywtQFdBRkxOUlNSMj5aYVpQYEpRUk//2wBDAQ4ODhMREyYVFSZPNS01T09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0//wAARCAACAAIDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD06iiigD//2Q=="
+)
+
+
+class RendererOptionTests(unittest.TestCase):
+    """默认 auto 路径下的选项矩阵与边界输入。"""
+
+    def _build(self, draft_path: Path, output: Path, *extra: str):
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            code = cli_main(["build", str(draft_path), "-o", str(output), *extra])
+        return code, stdout.getvalue(), stderr.getvalue()
+
+    def _complete_draft(self, root: Path) -> Path:
+        image = _image(root)
+        draft = root / "complete.md"
+        draft.write_text(
+            COMPLETE_DRAFT.format(image=str(image).replace("\\", "/")), encoding="utf-8"
+        )
+        return draft
+
+    def test_json_stdout_is_pure_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            draft = self._complete_draft(root)
+            output = root / "out.docx"
+            code, stdout, stderr = self._build(draft, output, "--json")
+            self.assertEqual(code, 0)
+            payload = json.loads(stdout)  # 必须能整体解析，不能夹带人类可读行
+            self.assertTrue(payload["ok"])
+            self.assertIn("上游制作器", stderr)
+
+    def test_font_size_spacing_and_page_numbers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            draft = self._complete_draft(root)
+            output = root / "styled.docx"
+            code, _, _ = self._build(
+                draft,
+                output,
+                "--font",
+                "仿宋",
+                "--font-size",
+                "10",
+                "--line-spacing",
+                "2",
+                "--page-numbers",
+            )
+            self.assertEqual(code, 0)
+            document = Document(str(output))
+            normal = document.styles["Normal"]
+            self.assertAlmostEqual(normal.font.size.pt, 10)
+            self.assertEqual(normal.element.rPr.rFonts.get(qn("w:eastAsia")), "仿宋")
+            body = next(p for p in document.paragraphs if "AUTO_FIELD" in p.text)
+            self.assertAlmostEqual(body.paragraph_format.line_spacing, 2)
+            footer = document.sections[0].footer
+            self.assertTrue(
+                footer.paragraphs
+                and footer.paragraphs[0]._element.findall(".//" + qn("w:fldChar"))
+            )
+
+    def test_no_part_titles_and_no_page_breaks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            draft = self._complete_draft(root)
+            output = root / "flat.docx"
+            code, _, _ = self._build(draft, output, "--no-part-titles", "--no-page-breaks")
+            self.assertEqual(code, 0)
+            document = Document(str(output))
+            self.assertFalse([p for p in document.paragraphs if p.style.name == "Heading 1"])
+            self.assertEqual(
+                len(document.element.body.findall(".//" + qn("w:pageBreakBefore"))), 0
+            )
+
+    def test_subsection_keep_creates_level_four_headings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            draft = root / "keep.md"
+            draft.write_text(
+                """---
+title: 一种保留小标题方法
+type: invention
+---
+
+# 说明书
+
+【发明内容】
+
+【要解决的技术问题】
+
+顺序不稳定。
+
+【技术方案】
+
+采集模块读取记录。
+
+【有益效果】
+
+顺序可复现。
+""",
+                encoding="utf-8",
+            )
+            output = root / "keep.docx"
+            code, _, _ = self._build(draft, output, "--subsection-style", "keep")
+            self.assertEqual(code, 0)
+            document = Document(str(output))
+            headings = [(p.text, p.style.name) for p in document.paragraphs if p.style.name.startswith("Heading")]
+            self.assertIn(("技术方案", "Heading 4"), headings)
+            self.assertIn(("有益效果", "Heading 4"), headings)
+
+    def test_type_override_switches_section_title(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            draft = root / "full.md"
+            draft.write_text(
+                """---
+title: 一种完整方法
+type: invention
+---
+
+# 权利要求书
+
+1. 一种完整方法，其特征在于，包括采集记录。
+
+# 说明书
+
+## 技术领域
+
+本合成材料仅用于测试。
+
+## 背景技术
+
+现有方式存在遗漏。
+
+## 发明内容
+
+### 要解决的技术问题
+
+减少遗漏。
+
+### 技术方案
+
+采集模块读取记录。
+
+### 有益效果
+
+减少遗漏。
+
+## 具体实施方式
+
+步骤S101，采集记录。
+""",
+                encoding="utf-8",
+            )
+            output = root / "utility.docx"
+            code, _, _ = self._build(draft, output, "--type", "utility")
+            self.assertEqual(code, 0)
+            text = "\n".join(p.text for p in Document(str(output)).paragraphs)
+            self.assertIn("【实用新型内容】", text)
+            self.assertNotIn("【发明内容】", text)
+
+    def test_table_escaped_pipe_is_restored(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            draft = _draft(root)
+            draft.embodiments += (
+                "\n\n| 参数 | 说明 |\n| --- | --- |\n| $n$ | 转义 a \\| b 单元格 |"
+            )
+            target = root / "pipe.docx"
+            render_docx_upstream(draft, target, RenderOptions())
+            cells = [
+                cell.text
+                for table in Document(str(target)).tables
+                for row in table.rows
+                for cell in row.cells
+            ]
+            self.assertIn("转义 a | b 单元格", cells)
+            self.assertFalse(any("\\|" in cell for cell in cells))
+
+    def test_jpeg_figure_embeds(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            jpeg = root / "figure.jpg"
+            jpeg.write_bytes(JPEG_BYTES)
+            draft = _draft(root)
+            draft.drawings = [Drawing(number=1, caption="JPEG 结构图", path=str(jpeg))]
+            target = root / "jpeg.docx"
+            render_docx_upstream(draft, target, RenderOptions())
+            with zipfile.ZipFile(target) as archive:
+                media = [n for n in archive.namelist() if n.startswith("word/media/")]
+            self.assertTrue(media)
+
+    def test_svg_figure_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            svg = root / "figure.svg"
+            svg.write_text(
+                "<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'/>",
+                encoding="utf-8",
+            )
+            draft = _draft(root)
+            draft.drawings = [Drawing(number=1, caption="SVG 结构图", path=str(svg))]
+            with self.assertRaises(UpstreamRenderError) as ctx:
+                render_docx_upstream(draft, root / "svg.docx", RenderOptions())
+            self.assertIn("图片", str(ctx.exception))
 
 
 if __name__ == "__main__":

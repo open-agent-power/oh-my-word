@@ -65,9 +65,15 @@
 
 在可选路径基础上，用更接近真实的复杂合成稿复核：发明稿 5 项权利要求（含 4 项从属与多项引用）、结构化发明内容、内联/块级公式、含公式单元格的表格、2 幅附图；实用新型 2 项权利要求 + 1 幅附图；外观设计稿件上游拒绝、本地可出稿。两稿共 9 页实际渲染并逐页查看：A4、页边距、黑色标题、12 pt 正文、24 pt 缩进、`numPr=0`、蓝色像素 0、发明稿 4 个原生 OMML、表格 3 行、图件可见；未发现新的映射缺口。
 
-据此把默认制作器改为 `auto`：发明/实用新型使用固定上游转换器，外观设计回落本地；不可用稿（缺图、公式回退、无 OMML、裸括号 LaTeX）默认**明确失败并提示 `--renderer local`**，不自动回退、不改变交付状态。`--renderer local` 保留用于含占位句的草稿审阅稿，旧命令与参数不变。该行为由 `tests/test_patent_upstream_render.py`（19 项）与安装态 `tools/check_installed_delivery.py` 固化，并随 CI 三平台矩阵执行。
+据此把默认制作器改为 `auto`：发明/实用新型使用固定上游转换器，外观设计回落本地；不可用稿（缺图、公式回退、无 OMML、裸括号 LaTeX）默认**明确失败并提示 `--renderer local`**，不自动回退、不改变交付状态。`--renderer local` 保留用于含占位句的草稿审阅稿，旧命令与参数不变。该行为由 `tests/test_patent_upstream_render.py` 与 `tests/test_knowledge_context.py`（共 28 项相关用例）以及安装态 `tools/check_installed_delivery.py` 固化，并随 CI 三平台矩阵执行。
 
 仍然成立的限制：Word/WPS 编辑往返、复杂公式全集、真实案卷与正式提交兼容未验证；本机渲染只覆盖 LibreOffice 26.8，块级公式可见位置可能与 Word 不同；外观设计不支持该路径。本轮只切换 `build`；`handoff` 仍显式使用本地排版（官方 XML 转换兼容未验证），两者是否统一留作后续轮次。
+
+### 2026-10-24 第 33 轮：完整验证与修复
+
+对默认 `auto` 路径做了选项矩阵与边界输入的完整验证：`--font / --font-size / --line-spacing / --page-numbers / --no-part-titles / --no-page-breaks / --subsection-style keep|flatten / --type / --split / --json / --renderer local|upstream` 逐项执行并核对产物；split 的 5 份文书（含说明书附图、摘要附图）全部实际渲染并查看；PNG/JPG 可嵌入，SVG 明确拒绝；表格转义竖线在边界还原为 `|`；知识绑定（`--knowledge`）与默认 upstream 组合生成 receipt 并实际走上游。
+
+验证中发现并修复三处问题：`--json` 的 stdout 被制作器/产物提示污染、`--no-part-titles` 对说明书附图文书无效、表格单元格转义竖线残留反斜杠；另修正 `latex2mathml` 的许可文案（MIT，不是 MIT-0）。新增选项矩阵、JSON 纯净性、JPG/SVG、转义竖线、知识绑定等回归测试。
 
 试跑使用Codex随附Python 3.12、python-docx 1.2.0；latex2mathml 3.81.1、PyYAML 6.0.3当时仅装在本机忽略的 `.agent/evidence/patent-render-trial-20261024/deps/`，不修改当时的项目虚拟环境或发行依赖；第 30 轮接入后 latex2mathml 与 docxcompose 已列入 pyproject 运行依赖。证据同目录保存源SHA256清单、fixture、运行命令/日志、21份生成物、PDF/页面、对象与哨兵检查、3个负例；脚本为 `fetch.py`、`trial.py`、`render_trial.py`、`negative.py` 和 `audit.py`。首轮PDF文字提取因捆绑Poppler不含pdftotext而失败，改用随附pypdf后全部完成，未把失败写成第一次即通过。计划附图生成器只下载审查，图中采用预先制作的合成图，不宣称自动制图链已验收。
 
