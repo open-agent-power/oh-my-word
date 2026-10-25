@@ -97,10 +97,10 @@ def check(root):
     return errors, {'skills': len(skills), 'local_links': links, 'cases': count}
 
 
-def main():
+def main(argv: list[str] | None = None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=Path(__file__).resolve().parents[1])
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     errors, counts = check(args.root)
     for error in errors:
         print(f'ERROR: {error}')

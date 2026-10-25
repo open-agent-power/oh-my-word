@@ -71,11 +71,11 @@ def inspect_environment(soffice=None, pdftoppm=None):
             "limits": "Preflight only. Tool or font presence does not prove rendered fidelity or Word/WPS compatibility. Pass --soffice and --pdftoppm explicitly when absent from PATH."}
 
 
-def main():
+def main(argv: list[str] | None = None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--soffice")
     parser.add_argument("--pdftoppm")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     result = inspect_environment(args.soffice, args.pdftoppm)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result["ready_for_preview"] else 2

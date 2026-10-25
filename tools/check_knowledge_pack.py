@@ -74,14 +74,14 @@ def audit(index, *, as_of, max_age_days=90, queries=None):
             "limits": "Collection age is a maintenance signal, not proof of validity or applicability. Expected-source recall is not answer correctness. No query suite cannot pass admission."}
 
 
-def main():
+def main(argv: list[str] | None = None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("index", type=Path)
     parser.add_argument("--as-of", type=date.fromisoformat, required=True, help="Explicit YYYY-MM-DD for repeatable checks")
     parser.add_argument("--max-age-days", type=int, default=90, help="Review interval, not a legal validity period")
     parser.add_argument("--queries", type=Path, help="JSON list of id/query/expected_sources and optional kind/topic/top_k")
     parser.add_argument("--out", type=Path, required=True, help="New report file outside the pack")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     output, index = args.out.resolve(), args.index.resolve()
     if output.exists() or output.is_relative_to(index):
         parser.error("Use a new report path outside the pack; historical reports are preserved")

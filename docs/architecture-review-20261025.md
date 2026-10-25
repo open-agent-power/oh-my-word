@@ -32,14 +32,17 @@
 改为链接；新增 `tools/check_rule_sources.py`（进 CI）检查“复述数字却没有链接”的文件，
 并补了 4 项测试。改规则现在只改一处。
 
-### 2. 检查脚本碎片化
+### 2. 检查脚本碎片化（**2026-10-25 已处理**）
 
 `tools/` 下有 `check_skills.py`、`check_word_skills.py`、`check_delivery_environment.py`、
 `check_full_dependencies.py`、`check_installed_delivery.py`、`check_knowledge_pack.py`、
 `check_code_manifest.py`。CI 里逐条调用，名字相近、失败信息格式不一。
 
-**建议**：合并成 `tools/check.py --skills --env --delivery --manifest --all`，
-内部复用现有函数，CI 一行调用；旧的 check_* 保留为薄壳转发，避免一次性破坏外部脚本。
+**已落地**：新增 `tools/check.py`（`--list` / `--group` / `--all` / `--json`）。
+轻量组（skills、rules）进 CI，一行 `python tools/check.py --all`；
+需要本机上下文或产物参数的重型组（manifest、env、knowledge、deps、delivery）必须显式
+`--group` 调用，避免在没有清单/索引时制造假失败。原有 `check_*.py` 全部保留并改成
+接受 `argv`，既是唯一实现，也仍可单独运行。
 
 ### 3. 官方工具这一段完全在仓库外
 

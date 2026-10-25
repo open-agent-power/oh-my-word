@@ -241,13 +241,13 @@ def smoke(output, records, *, preview=False, soffice=None, pdftoppm=None):
             "skill_bundle": "not included in wheel; use full repository for Agent Skill resources"}
 
 
-def main():
+def main(argv: list[str] | None = None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True, help="Fresh directory outside the checkout")
     parser.add_argument("--preview", action="store_true", help="Require real LibreOffice/Poppler conversion")
     parser.add_argument("--soffice")
     parser.add_argument("--pdftoppm")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     output = require_outside(args.out)
     output.mkdir(parents=True, exist_ok=False)
     report = {"status": "fail", "python": sys.version, "interpreter": sys.executable,

@@ -72,7 +72,7 @@ def dependency_versions() -> dict[str, dict[str, object]]:
     return dependencies
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output",
@@ -80,7 +80,7 @@ def main() -> int:
         default=Path("outputs/acceptance/full-dependencies.json"),
         help="JSON evidence path (relative paths are rooted at the repository)",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     output = args.output if args.output.is_absolute() else ROOT / args.output
 
     dependencies = dependency_versions()

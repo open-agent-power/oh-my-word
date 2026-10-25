@@ -42,9 +42,8 @@ jobs:
       - name: Install full test dependencies
         run: python -m pip install ".[dev,ingest,templates]" build beautifulsoup4
       - run: python -m pip check
-      - run: python tools/check_word_skills.py
-      - run: python tools/check_skills.py
-      - run: python tools/check_rule_sources.py
+      - name: Static checks (skills, rule sources)
+        run: python tools/check.py --all
       - name: Run complete deterministic regression without skips
         run: python tools/check_full_dependencies.py
       - name: Record resolved dependency versions

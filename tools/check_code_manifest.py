@@ -23,12 +23,12 @@ def digest(relative_path: str) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--refresh", action="store_true", help="rewrite hashes for listed files")
     parser.add_argument("--include", action="append", default=[], help="add a source file when refreshing")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.include and not args.refresh:
         parser.error("--include requires --refresh")
 
