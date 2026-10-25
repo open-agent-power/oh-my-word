@@ -217,6 +217,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_tpl.add_argument("--font-size", type=float, default=BODY_FONT_SIZE_PT, help="正文字号（仅 --docx 时有效）")
     p_tpl.add_argument("--knowledge", help="固定知识索引；在稿件旁生成待阅读的专利规则上下文")
 
+    # ---- env ----
+    p_env = sub.add_parser(
+        "env",
+        help="检测能否跑官方 WORD 转 XML 编辑器（宿主、插件、信任、DTD）",
+        description=(
+            "只回答「这台机器现在能不能把 DOCX 转成国知局 XML」。"
+            "检查 Office/WPS 宿主、官方插件安装与注册、清单签名、VSTO 信任项与 DTD 资源；"
+            "加 --fix-trust 可用当前用户权限补信任项（不需要管理员）。"
+        ),
+    )
+    p_env.add_argument("--json", action="store_true", help="输出 JSON，便于脚本判断")
+    p_env.add_argument("--com", action="store_true", help="启动 Word 实际验证插件是否 Connect（较慢）")
+    p_env.add_argument("--fix-trust", action="store_true", help="写当前用户的 VSTO 信任项")
+
     # ---- ingest ----
     p_ing = sub.add_parser(
         "ingest",
@@ -857,7 +871,21 @@ def cmd_ingest(args: argparse.Namespace) -> int:
 # 入口
 # --------------------------------------------------------------------------
 
+def cmd_env(args):
+    from . import cnipa_env
+
+    argv = []
+    if getattr(args, "json", False):
+        argv.append("--json")
+    if getattr(args, "com", False):
+        argv.append("--com")
+    if getattr(args, "fix_trust", False):
+        argv.append("--fix-trust")
+    return cnipa_env.main(argv)
+
+
 _COMMANDS = {
+    "env": cmd_env,
     "build": cmd_build,
     "review-init": cmd_review_init,
     "handoff": cmd_handoff,

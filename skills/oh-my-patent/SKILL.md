@@ -30,6 +30,8 @@ description: 中国专利申请的通用总览与编排入口。识别申请类�
 
 ## 可选工具交付链路
 
+需要官方 XML 时先检测环境：`python tools/patent.py env`；缺宿主/插件/信任项按 [官方工具安装与转换](references/cnipa-official-tool.md) 处理，装完再 `env --com` 确认「专利处理」菜单真的加载。
+
 选择本项目工具制作新案审阅稿或定稿时适用以下链路；局部修改、材料梳理、仅排版按 [任务范围与模块交接](references/task-scope.md) 选取必要步骤。文本路径按上方方法执行，保留未完成状态，不把局部任务或文本自查称作完整申请审查。
 
 1. 读 [01 intake](prompts/01-intake.md)，确定申请类型、领域路由、案件阶段、已有公开、申请人/发明人及材料边界。
@@ -38,7 +40,7 @@ description: 中国专利申请的通用总览与编排入口。识别申请类�
 4. 读 [06 撰写](prompts/06-specification-build.md) 与 [中国现行规则](references/cnipa-2026.md)，结合通用模板和已加载子 Skill 起草稿件。
 5. 读 [内容审查](prompts/08-content-review.md)，将领域结论汇入已有检查项，形成逐特征支持关系和 `content-review.json`。
 6. 跑 [07 自检](prompts/07-self-check.md)，修改后重新审查，执行 `--final`；交付 Word 审阅稿或 `handoff` 交接包。
-7. 需要正式电子申请时读 [XML 转换](references/cnipa-xml-handoff.md)，在官方工具转换、预览核对并完成请求书及实际提交。没有回执不能称已提交。
+7. 需要正式电子申请时先读 [官方工具安装与转换](references/cnipa-official-tool.md)，跑 `python tools/patent.py env` 确认宿主与插件；缺什么按该文装什么（`python tools/cnipa_install.py`）。逐份单书转换、过官方 DTD 与保真核对后，再读 [XML 转换](references/cnipa-xml-handoff.md) 完成请求书、系统预览与提交。没有回执不能称已提交。
 
 只有一句话也不能跳过事实核对。工具路径材料完整时可跳过 02～05，但不可跳过事实账本和内容审查。文本路径同样核对事实及支持，可用普通笔记；缺必要实施信息时交付可修改草稿与问题，不补造技术。
 

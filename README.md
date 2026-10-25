@@ -137,6 +137,8 @@ python -m word_skills copyright build copyright.json --out copyright-delivery --
 python tools/patent.py template invention -o outputs/draft.md
 python tools/patent.py lint outputs/draft.md
 python tools/patent.py build outputs/draft.md -o outputs/review.docx --strict
+python tools/patent.py env                     # 官方 XML 工具与宿主是否就绪
+python tools/patent.py env --com               # 再启动 Word 实测插件加载
 python -m word_skills patent template invention -o outputs/draft.md
 ```
 
@@ -152,11 +154,15 @@ oh-my-patent build 稿件.md -o 申请文件.docx --renderer local  # 草稿占�
 oh-my-patent build 稿件.md -o 申请文件/ --split               # 每个部分独立成文件
 ```
 
-适配层只做三件事：把稿件投影成上游认识的 Markdown 文书、调用上游 `convert_md_to_docx`、在边界套用本项目 A4 / 黑色标题与正文 / 宋体 / 1.5 倍行距 / 2 字符首行缩进。有效公式生成原生 OMML；**缺图、公式回退为原文、普通括号误写 LaTeX 会明确失败并提示 `--renderer local`**，不会写成「制作成功」。含未登记图件的草稿（如 `examples/invention-example.md`）请显式加 `--renderer local` 生成带占位句的审阅稿。
+适配层只做三件事：把稿件投影成上游认识的 Markdown 文书、调用上游 `convert_md_to_docx`、在边界套用本项目 A4 / 黑色标题与正文 / 宋体 / 1.25 倍行距（实测行间空白 2.62mm）/ 2 字符首行缩进。有效公式生成原生 OMML；**缺图、公式回退为原文、普通括号误写 LaTeX 会明确失败并提示 `--renderer local`**，不会写成「制作成功」。含未登记图件的草稿（如 `examples/invention-example.md`）请显式加 `--renderer local` 生成带占位句的审阅稿。
 
-`handoff` 与 `build` 使用同一个 `--renderer` 选择（默认 `auto`），并在交接包 `manifest.json` 的 `renderer` 字段记录实际使用的制作器；如需旧版面仍可显式 `--renderer local`。官方 XML 转换兼容性尚未验证：官方 WORD 转 XML 编辑器 V4.3 需管理员安装且要求 Office 2013+ / WPS 专业版 2015+，本机未能安装。交接说明已按官方手册提示：`摘要附图` 文书仅供审阅，转换前删除（系统不再单独接收）。
+`handoff` 与 `build` 使用同一个 `--renderer` 选择（默认 `auto`），并在交接包 `manifest.json` 的 `renderer` 字段记录实际使用的制作器；如需旧版面仍可显式 `--renderer local`。
 
-限制：外观设计不走该路径；`latex2mathml`、`docxcompose` 为运行依赖；WPS 12.1 已完成打开/导出/编辑往返，Word 在本机不可用；官方 XML 转换与正式提交仍未验证。固定原件、边界差异与验证范围见 [复用决策](docs/upstream-reuse.md)。
+官方 XML 转换已实机验证（2026-10-25）：Windows 11 + Microsoft 365 + 官方 WORD 转 XML 编辑器 V4.3，交接包拆出的四书分别转成 `100001`~`100004` XML 并全部通过官方 `cn-application-body-20080416.dtd`；权利要求 17/17 项、摘要 258 字逐字一致。安装与插件加载有两个坑：MSI 启动条件要求传 `SETUPEXEDIR`（直装报「只能从 bootstrapper 运行」），且发行方清单证书 2026-07-14 到期、无时间戳，全新安装默认不信任，需要当前用户级 VSTO 信任项。检测用 `python tools/patent.py env`，安装/修复用 `python tools/cnipa_install.py`，完整步骤与故障速查见 [官方工具安装与转换](skills/oh-my-patent/references/cnipa-official-tool.md)。
+
+交接说明已按官方手册提示：`摘要附图` 文书仅供审阅，转换前删除（系统改为在请求书里指定图号）。转换必须**逐份单书**做「一键添加标记 → 单书XML转换」；把五书合进一个单节文档时工具会把整篇当成权利要求书。
+
+限制：外观设计不走该路径；`latex2mathml`、`docxcompose` 为运行依赖；WPS 12.1 与 Word 365 均已完成打开/导出/编辑往返；官方 XML 转换已验证，**正式提交仍未验证**（需申请人账号、请求书与电子签名）。固定原件、边界差异与验证范围见 [复用决策](docs/upstream-reuse.md)。
 
 ## 验证
 
