@@ -53,7 +53,7 @@
 
 上游制作链在第 30 轮先接成**显式可选路径** `oh-my-patent build … --renderer upstream`（第 32 轮改为默认 `auto`，见下节），当时默认路径保持本地排版。原件逐字节保存在 `oh_my_patent/render/_vendor/patent_application/`（`md_to_docx.py`、`math_to_omml.py`、`latex_delimiters.py`、`stdio_utf8.py`、`emit_application_docx.py` 及 MIT LICENSE），SHA256 与上游 `6935a14d` 一致并写入 `UPSTREAM.json`；`oh_my_patent.render.upstream` 在每次制作前校验，哈希不符即拒绝。适配层只负责：稿件→四类 Markdown 投影（章节组装复用本地渲染层的同一实现）、调用上游 `convert_md_to_docx`、边界版面与失败门禁；原文解析、表格和公式转换没有重写。
 
-边界版式沿用现有配置：A4（210×297 mm）、页边距 25/25/15/15 mm、标题与正文黑色、宋体正文 12 pt、**1.25 倍行距（2026-10-25 由 1.5 订正，见 [format-spec](format-spec.md) 行距实测表）**、2 字符首行缩进、标题字号 22/16/12/12 pt；上游自动编号列表在边界还原为纯文本编号（本项目不用 WPS 不可靠的 `numPr`）。失败门禁：公式回退为原文、含公式但无 OMML 对象、缺图/图片无法嵌入、普通括号 LaTeX、外观设计均明确失败，不生成「成功」产物。
+边界版式沿用现有配置：A4（210×297 mm）、页边距 25/25/15/15 mm、标题与正文黑色、宋体正文 12 pt、**1.25 倍行距（2026-10-25 由 1.5 订正，见 [format-spec](format-spec.md) 行距实测表）**、2 字符首行缩进、标题字号 13/13/12/12 pt（同轮由 22/16 下调至 4.5mm 字高上限内）；上游自动编号列表在边界还原为纯文本编号（本项目不用 WPS 不可靠的 `numPr`）。失败门禁：公式回退为原文、含公式但无 OMML 对象、缺图/图片无法嵌入、普通括号 LaTeX、外观设计均明确失败，不生成「成功」产物。
 
 实测：4 组合成内容（普通、公式+表格、附图+长文、实用新型）生成 4 份单文件 DOCX；LibreOffice 26.8 实际渲染 17 页并逐页查看。核对结果：A4、页边距、标题字号/黑色、12 pt 正文、24 pt 首行缩进、`numPr=0`、蓝色像素计数 0、4 个原生 OMML、表格 3 行（含公式单元格）、图件可见、长文 30 段与结尾标记可在 PDF 定位。负例（坏公式回退、缺图、普通括号 LaTeX、外观设计）均被拒绝。证据（`audit.json`、逐页 PNG、PDF、运行日志）在忽略目录 `.agent/evidence/patent-upstream-20261024/`；本机 LibreOffice 必须把 `TEMP/TMP/HOME/XDG_*` 指向可写工作区目录，否则会报「source file could not be loaded」。
 

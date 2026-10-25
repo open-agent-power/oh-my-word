@@ -478,6 +478,7 @@ def configure_document(document, options) -> None:
 
     _patch_doc_defaults(document, western, east_asian, options)
     _patch_normal_style(document, western, east_asian, options)
+    _patch_heading_styles(document, western, east_asian, options)
     _patch_settings(document)
     configure_section(document.sections[0])
 
@@ -570,6 +571,40 @@ def _patch_normal_style(document, western: str, east_asian: str, options) -> Non
     pf.line_spacing = options.line_spacing
     pf.space_before = Pt(0)
     pf.space_after = Pt(0)
+
+
+def _patch_heading_styles(document, western: str, east_asian: str, options) -> None:
+    """把 Heading 1 / Heading 2 样式的字号钉到合规档位。
+
+    python-docx 默认模板的 Heading 1 是 14pt，宋体墨迹约 4.7mm，
+    已超国知局 4.5mm 字高上限。标题目前靠 run 级字号覆盖，样式本身却仍是
+    14pt —— 任何未显式设字号的标题段落都会漏出超限字号。
+    这里让样式与 run 取同一档，杜绝漏网。
+    """
+    from .spec import HEADING_NAME_FONT_SIZE_PT, TITLE_FONT_SIZE_PT
+
+    for name, size in (
+        ("Heading 1", TITLE_FONT_SIZE_PT),
+        ("Heading 2", HEADING_NAME_FONT_SIZE_PT),
+    ):
+        try:
+            style = document.styles[name]
+        except KeyError:
+            continue
+        style.font.name = western
+        style.font.size = Pt(size)
+
+        rPr = style.element.get_or_add_rPr()
+        _de_theme_tree(rPr, western, east_asian)
+
+        rFonts = get_or_add(rPr, "w:rFonts", _RPR_ORDER)
+        rFonts.set(qn("w:ascii"), western)
+        rFonts.set(qn("w:hAnsi"), western)
+        rFonts.set(qn("w:eastAsia"), east_asian)
+        rFonts.set(qn("w:cs"), western)
+        rFonts.set(qn("w:hint"), "eastAsia")
+
+        style.paragraph_format.line_spacing = options.line_spacing
 
 
 def _patch_settings(document) -> None:

@@ -397,7 +397,7 @@ class DocxRenderer:
         if not blocks:
             return
 
-        # 说明书首行是发明名称，居中、三号加粗，与请求书中的名称一致。
+        # 说明书首行是发明名称，居中加粗，与文书名称同档，与请求书中的名称一致。
         self._add_paragraph(
             self.draft.title,
             align=WD_ALIGN_PARAGRAPH.CENTER,
