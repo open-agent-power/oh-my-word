@@ -35,6 +35,7 @@ from .schema import PatentDraft, PatentType
 from .spec import (
     BODY_FONT_SIZE_PT,
     LINE_SPACING,
+    PAGE_NUMBER_REQUIRED,
     Font,
     RenderOptions,
     SubsectionStyle,
@@ -121,8 +122,16 @@ def _add_render_options(sub: argparse.ArgumentParser) -> None:
     )
     group.add_argument(
         "--page-numbers",
+        dest="page_numbers",
         action="store_true",
-        help="在页脚居中添加页码",
+        default=PAGE_NUMBER_REQUIRED,
+        help="在页脚居中添加页码（默认已开启，符合审查指南要求）",
+    )
+    group.add_argument(
+        "--no-page-numbers",
+        dest="page_numbers",
+        action="store_false",
+        help="不输出页码，仅用于纯屏幕审阅稿",
     )
 
 
@@ -262,7 +271,7 @@ def _make_options(args: argparse.Namespace) -> RenderOptions:
     options.bold_sections = bool(getattr(args, "bold_sections", False))
     options.include_part_titles = not bool(getattr(args, "no_part_titles", False))
     options.page_break_between_parts = not bool(getattr(args, "no_page_breaks", False))
-    options.page_numbers = bool(getattr(args, "page_numbers", False))
+    options.page_numbers = bool(getattr(args, "page_numbers", PAGE_NUMBER_REQUIRED))
     options.validate()
     return options
 

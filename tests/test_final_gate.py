@@ -180,7 +180,7 @@ class FinalGateTest(unittest.TestCase):
         self.assertEqual(self.cli('build', str(self.path), '-o', str(out), '--final', *args), 0)
         self.assertIn('温度采集', '\n'.join(p.text for p in Document(out).paragraphs))
         self.assertEqual(Document(out).styles['Normal'].font.size.pt, 12)
-        self.assertEqual(Document(out).styles['Normal'].paragraph_format.line_spacing, 1.5)
+        self.assertEqual(Document(out).styles['Normal'].paragraph_format.line_spacing, 1.25)
         handoff = self.root / 'handoff'
         self.assertEqual(self.cli('handoff', str(self.path), '-o', str(handoff), *args), 0)
         manifest = json.loads((handoff / 'manifest.json').read_text(encoding='utf-8'))

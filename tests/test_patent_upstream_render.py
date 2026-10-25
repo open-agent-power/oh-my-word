@@ -166,7 +166,7 @@ class RenderTests(unittest.TestCase):
 
             body = next(p for p in document.paragraphs if "标记FIELD_A" in p.text)
             self.assertGreaterEqual(body.paragraph_format.first_line_indent.pt, 23.5)
-            self.assertAlmostEqual(body.paragraph_format.line_spacing, 1.5)
+            self.assertAlmostEqual(body.paragraph_format.line_spacing, 1.25)
 
     def test_markdown_table_keeps_data_rows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

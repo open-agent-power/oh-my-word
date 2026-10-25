@@ -47,6 +47,10 @@ python tools/patent.py template <invention|utility|design> -o 稿件.md
 - **不得使用**「最好是」「例如」「尤其是」「必要时」「大约」「左右」等含义不确定的用语
 - 除绝对必要外，不得使用「如说明书……部分所述」「如图……所示」
 - **不得有插图**（化学式、数学式可以）
+- **每一项权利要求只允许在结尾处使用一个句号**。分项列举的步骤/部件，段末用**分号**，
+  最后一项才用句号（官方 `100001权利要求书` 背面「注意事项」第五条）
+- 科技术语须与说明书逐字一致（官方「注意事项」第四条）
+- 每页下框线居中顺序编写页码（同「注意事项」第六条）
 
 关于独立权利要求的数量：法条说「一项发明应当只有一个独立权利要求」，但
 **符合单一性时可以写两项以上**（第一独权 + 并列独权）。《审查指南》第二部分
@@ -209,11 +213,11 @@ python tools/patent.py template design -o 稿件.md   # 生成骨架
 | --- | --- |
 | `--font 宋体\|仿宋\|楷体` | 正文汉字字体，默认宋体 |
 | `--font-size 12` | 正文字号（磅），工具范围10~14pt，不能由名义字号直接认定实际字高合格 |
-| `--line-spacing 1.5` | 行距倍数 |
+| `--line-spacing 1.25` | 行距倍数，**默认 1.25**。实测 12pt 宋体行间空白 2.96mm，落在 2.5~3.5mm 内；1.5 倍为 4.32mm，**超上限**，不要用 |
 | `--subsection-style inline\|keep\|flatten` | 「发明内容」三级小标题的处理方式。**默认 `inline`**，把「技术方案：」这类小标题并入段落做加粗引导词，最接近代理师的正式稿 |
 | `--bold-sections` | 章节标题加粗（默认不加粗） |
 | `--split` | 每部分独立成文件 |
-| `--page-numbers` | 页脚页码 |
+| `--no-page-numbers` | **默认已输出页码**（各部分分别编号、页脚居中、下沿距底 15mm）；只在做纯屏幕审阅稿时用它关掉 |
 | `--strict` | 自检有错误则拒绝生成 |
 | `--type` | 覆盖稿件的专利类型 |
 
@@ -235,8 +239,11 @@ python tools/patent.py build 稿件.md -o outputs/审阅稿.docx --final --facts
 需要官方转换交接时：
 
 ```bash
-python tools/patent.py handoff 稿件.md -o outputs/cnipa-handoff --page-numbers --facts outputs/TECH_FACTS.json --review outputs/content-review.json
+python tools/patent.py handoff 稿件.md -o outputs/cnipa-handoff --facts outputs/TECH_FACTS.json --review outputs/content-review.json
 ```
+
+页码默认输出（各部分分别编号、页脚居中、下沿距底 15mm），不需要再传 `--page-numbers`；
+只有做纯屏幕审阅稿时才用 `--no-page-numbers` 关掉。
 
 交接包拆分各文书并分离摘要附图；DOCX 仍须通过官方工具或编辑功能制作符合数据标准的 XML 后核对。
 

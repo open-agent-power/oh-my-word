@@ -9,9 +9,9 @@
 1. 把 :class:`~oh_my_patent.schema.PatentDraft` 投影成上游认识的
    「权利要求书 / 说明书 / 说明书摘要 / 说明书附图」Markdown；
 2. 调用上游 ``convert_md_to_docx`` 生成文档；
-3. 在边界套用本项目的版面配置（A4、黑色标题与正文、宋体、1.5 倍行距、
-   2 字符首行缩进、页边距），并把上游「缺图/坏公式仍返回成功」的行为
-   拦成明确失败。
+3. 在边界套用本项目的版面配置（A4、黑色标题与正文、宋体、默认 1.25 倍行距
+   ——实测行间空白 2.96mm，落在规定 2.5~3.5mm 内、2 字符首行缩进、页边距），
+   并把上游「缺图/坏公式仍返回成功」的行为拦成明确失败。
 
 合法输入仍以现有稿件模型、外层审阅与交接门禁为准；这里的失败只表示
 「本次 DOCX 制作不可交付」，不替代 ``lint``、``final`` 或人工复核。
@@ -452,7 +452,9 @@ def _apply_boundary_layout(document: Document, options: RenderOptions) -> None:
     western, east_asian = options.resolved_fonts()
 
     for name, (size, bold, alignment) in _HEADING_LAYOUT.items():
-        _configure_heading(document, name, size, bold, alignment, western, east_asian)
+        _configure_heading(
+            document, name, size, bold, alignment, western, east_asian, options.line_spacing
+        )
 
     for paragraph in document.paragraphs:
         _format_paragraph(paragraph, options, western, east_asian)
@@ -484,6 +486,7 @@ def _configure_heading(
     alignment: int,
     western: str,
     east_asian: str,
+    line_spacing: float,
 ) -> None:
     style = document.styles[name]
     style.font.name = western
@@ -502,7 +505,7 @@ def _configure_heading(
     fmt.first_line_indent = Pt(0)
     fmt.space_before = Pt(0)
     fmt.space_after = Pt(0)
-    fmt.line_spacing = 1.5
+    fmt.line_spacing = line_spacing
 
 
 def _format_paragraph(

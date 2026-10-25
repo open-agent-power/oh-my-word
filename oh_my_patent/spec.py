@@ -35,15 +35,22 @@ MARGIN_BOTTOM_MM = 15.0
 
 #: 纸件字高不低于3.5mm；工具审阅稿默认12pt。名义字号不等于实测字高。
 BODY_FONT_SIZE_PT = 12.0
-#: 文书名称（如「权利要求书」）与发明名称的居中标题字号，二号加粗。
+#: 文书名称（如「权利要求书」）的居中标题字号，二号加粗。
+#: 注意：22pt 宋体实测墨迹字高约 7.5mm，超《说明书》填表说明 4.5mm 上限，
+#: 只适合屏幕审阅稿。**送审纸件应改用 13pt（墨迹约 4.3mm）。**
 TITLE_FONT_SIZE_PT = 22.0
 #: 发明名称在说明书首行的字号，三号加粗。
+#: 16pt 实测约 5.6mm，同样超限；送审纸件应改用 12~13pt。
 HEADING_NAME_FONT_SIZE_PT = 16.0
 #: 【技术领域】这类章节标题字号，与正文一致，符合公开文本的朴素排版。
 SECTION_FONT_SIZE_PT = 12.0
 
-#: 审阅稿行距倍数；不能直接当作纸件要求的2.5~3.5mm行间距认证。
-LINE_SPACING = 1.5
+#: 审阅稿行距倍数。
+#: **默认 1.25**：实测（300dpi 扫描墨迹行带，12pt 宋体）基线 6.86mm、行间空白 2.96mm，
+#: 落在国知局《权利要求书/说明书》填表说明要求的 2.5~3.5mm 内。
+#: 曾误用 1.5：实测基线 8.21mm、行间空白 **4.32mm，超 3.5mm 上限**，且多排约 2 页。
+#: 换算不能用「倍数 × 字号」，必须渲染后量墨迹。
+LINE_SPACING = 1.25
 
 #: 正文首行缩进字符数（中文文书惯例 2 字符 = 2 em）。
 FIRST_LINE_INDENT_CHARS = 2
@@ -159,7 +166,11 @@ TITLE_RECOMMENDED_MAX_CHARS = 25
 TITLE_ABSOLUTE_MAX_CHARS = 40
 
 #: 申请文件中所有文书（权利要求书/说明书/摘要）各自独立编页。
-PAGE_NUMBER_REQUIRED = False
+#: **默认开启**：审查指南第五部分第一章 4.3/5.6 要求「各部分分别用阿拉伯数字顺序编写页码，
+#: 位于每页下部页边上沿、左右居中，页码下沿至纸底 15mm」。没有页码不是「朴素排版」，
+#: 是不合规定 —— 曾默认 False，导致生成稿一律缺页码。
+#: 需要无页码的纯审阅稿时用 CLI 的 ``--no-page-numbers``。
+PAGE_NUMBER_REQUIRED = True
 
 
 # --------------------------------------------------------------------------
@@ -506,7 +517,10 @@ class RenderOptions:
         if not math.isfinite(self.body_size) or not 10 <= self.body_size <= 14:
             raise ValueError("正文字号须为10~14pt范围内的有限数值，建议12pt。")
         if not math.isfinite(self.line_spacing) or self.line_spacing < 1:
-            raise ValueError("行距倍数须为至少1的有限数值，建议1.5。")
+            raise ValueError(
+                "行距倍数须为至少1的有限数值，建议1.25"
+                "（1.5 倍实测行间空白 4.32mm，已超 3.5mm 上限）。"
+            )
 
     def resolved_fonts(self) -> tuple[str, str]:
         """返回 ``(西文字体, 中文字体)``。"""

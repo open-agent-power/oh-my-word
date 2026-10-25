@@ -622,7 +622,9 @@ def configure_section(section) -> None:
     section.right_margin = Mm(15)
     section.bottom_margin = Mm(15)
     section.header_distance = Mm(15)
-    section.footer_distance = Mm(10)
+    # 指南：页码下沿至纸张底边留 15mm。footer_distance 直接决定页码墨迹下沿位置，
+    # 旧值 10mm 会让页码贴边，改成 15mm。
+    section.footer_distance = Mm(15)
 
     sectPr = section._sectPr
     doc_grid = sectPr.find(qn("w:docGrid"))
@@ -647,6 +649,9 @@ def add_page_number_footer(section, western: str, east_asian: str, size_pt: floa
     paragraph = footer.paragraphs[0] if footer.paragraphs else footer.add_paragraph()
     paragraph.text = ""
     paragraph.alignment = 1  # CENTER
+    # 版心居中不等于纸张居中：左 25mm / 右 15mm 让版心中心右移 5mm，
+    # 页脚加 10mm 右缩进把居中位置拉回纸张中线（实测残余偏移 <0.5mm）。
+    paragraph.paragraph_format.right_indent = Mm(10)
 
     run = paragraph.add_run()
     fld_begin = OxmlElement("w:fldChar")
@@ -654,10 +659,16 @@ def add_page_number_footer(section, western: str, east_asian: str, size_pt: floa
     instr = OxmlElement("w:instrText")
     instr.set(qn("xml:space"), "preserve")
     instr.text = " PAGE "
+    fld_sep = OxmlElement("w:fldChar")
+    fld_sep.set(qn("w:fldCharType"), "separate")
+    placeholder = OxmlElement("w:t")
+    placeholder.text = "1"
     fld_end = OxmlElement("w:fldChar")
     fld_end.set(qn("w:fldCharType"), "end")
     run._element.append(fld_begin)
     run._element.append(instr)
+    run._element.append(fld_sep)
+    run._element.append(placeholder)
     run._element.append(fld_end)
 
     set_run_font(run, western, east_asian, size_pt=size_pt)

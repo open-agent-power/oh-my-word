@@ -61,10 +61,12 @@ python tools/patent.py build outputs/draft.md -o outputs/review.docx --strict
 python tools/patent.py review-init outputs/draft.md --facts outputs/TECH_FACTS.json -o outputs/content-review.json
 # 实际审查并补齐 JSON 后：
 python tools/patent.py build outputs/draft.md -o outputs/final-review.docx --final --facts outputs/TECH_FACTS.json --review outputs/content-review.json
-python tools/patent.py handoff outputs/draft.md -o outputs/cnipa-handoff --facts outputs/TECH_FACTS.json --review outputs/content-review.json --page-numbers
+python tools/patent.py handoff outputs/draft.md -o outputs/cnipa-handoff --facts outputs/TECH_FACTS.json --review outputs/content-review.json
 ```
 
 - 普通 build：草稿；strict：无形式 ERROR；final：本工具的审阅交付门禁，不是法律认证。
+- **版面默认值即合规基线**：正文 12pt、行距 1.25 倍（实测行间空白 2.96mm，落在 2.5~3.5mm）、页码默认输出（各部分分别编号、页脚居中、下沿距底 15mm）。1.5 倍行距实测 4.32mm 已超上限，不要用；纯屏幕审阅稿才加 `--no-page-numbers`。字高与行距不能按 pt/倍数推断，须渲染后量墨迹，见 [format-spec](../../docs/format-spec.md) 与 [实测结论](../../docs/cnipa-format-lessons.md)。
+- 送审纸件标题字号需从 22/16pt 降到 13pt 以内：22pt 宋体墨迹约 7.5mm，超 4.5mm 上限，只适合屏幕审阅稿。
 - `--final` 不允许 `--force`，缺图、待确认、未闭合 P0/P1 或过期证据均拒绝。
 - `handoff` 默认 pending official conversion，包含拆分 Word、原图、审查证据与核对清单；不生成自定义 CNIPA XML。
 - 机器不能证明技术现实、支持关系语义完备或创造性。不得机械填写 pass。
