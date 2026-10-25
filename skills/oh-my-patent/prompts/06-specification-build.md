@@ -213,11 +213,11 @@ python tools/patent.py template design -o 稿件.md   # 生成骨架
 | --- | --- |
 | `--font 宋体\|仿宋\|楷体` | 正文汉字字体，默认宋体 |
 | `--font-size 12` | 正文字号（磅），工具范围10~14pt，不能由名义字号直接认定实际字高合格 |
-| `--line-spacing 1.25` | 行距倍数，**默认 1.25**。实测 12pt 宋体行间空白 2.96mm，落在 2.5~3.5mm 内；1.5 倍为 4.32mm，**超上限**，不要用 |
+| `--line-spacing 1.25` | 行距倍数，**默认 1.25**；判据见 [版面硬规则](../references/cnipa-2026.md#版面硬规则)。不要为「看着宽松」改回 1.5 倍 |
 | `--subsection-style inline\|keep\|flatten` | 「发明内容」三级小标题的处理方式。**默认 `inline`**，把「技术方案：」这类小标题并入段落做加粗引导词，最接近代理师的正式稿 |
 | `--bold-sections` | 章节标题加粗（默认不加粗） |
 | `--split` | 每部分独立成文件 |
-| `--no-page-numbers` | **默认已输出页码**（各部分分别编号、页脚居中、下沿距底 15mm）；只在做纯屏幕审阅稿时用它关掉 |
+| `--no-page-numbers` | **默认已输出页码**（各部分分别编号、页脚居中，位置判据见 [版面硬规则](../references/cnipa-2026.md#版面硬规则)）；只在做纯屏幕审阅稿时用它关掉 |
 | `--strict` | 自检有错误则拒绝生成 |
 | `--type` | 覆盖稿件的专利类型 |
 
@@ -242,8 +242,8 @@ python tools/patent.py build 稿件.md -o outputs/审阅稿.docx --final --facts
 python tools/patent.py handoff 稿件.md -o outputs/cnipa-handoff --facts outputs/TECH_FACTS.json --review outputs/content-review.json
 ```
 
-页码默认输出（各部分分别编号、页脚居中、下沿距底 15mm），不需要再传 `--page-numbers`；
-只有做纯屏幕审阅稿时才用 `--no-page-numbers` 关掉。
+页码默认输出（各部分分别编号、页脚居中，位置要求见 [版面硬规则](../references/cnipa-2026.md#版面硬规则)），
+不需要再传 `--page-numbers`；只有做纯屏幕审阅稿时才用 `--no-page-numbers` 关掉。
 
 交接包拆分各文书并分离摘要附图；DOCX 仍须通过官方工具或编辑功能制作符合数据标准的 XML 后核对。
 
@@ -253,8 +253,8 @@ python tools/patent.py handoff 稿件.md -o outputs/cnipa-handoff --facts output
 - [ ] 修正过的地方**重新跑过一遍 `lint`**，不是假设改对了
 - [ ] 自检里发现的「是否合格」类问题，已经改到稿件里，而不是只写在报告里
 - [ ] **自检清单本身没有写进申请文件正文**。正文里出现「自检」二字即不合格
-- [ ] 版面用默认值：正文 12pt、文书名称与发明名称 13pt、行距 1.25 倍、页码开启。
-      「标题看起来小」不是调大它的理由——14pt 宋体墨迹已到 4.7mm，超 4.5mm 上限
+- [ ] 版面用默认值（正文字号、标题字号、行距、页码均见 [版面硬规则](../references/cnipa-2026.md#版面硬规则)）。
+      「标题看起来小」不是调大它的理由——实测已在上限附近，调大即超
 
 ## 下一步
 

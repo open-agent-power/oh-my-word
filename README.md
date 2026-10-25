@@ -154,7 +154,7 @@ oh-my-patent build 稿件.md -o 申请文件.docx --renderer local  # 草稿占�
 oh-my-patent build 稿件.md -o 申请文件/ --split               # 每个部分独立成文件
 ```
 
-适配层只做三件事：把稿件投影成上游认识的 Markdown 文书、调用上游 `convert_md_to_docx`、在边界套用本项目 A4 / 黑色标题与正文 / 宋体 / 1.25 倍行距（实测行间空白 2.62mm）/ 2 字符首行缩进。有效公式生成原生 OMML；**缺图、公式回退为原文、普通括号误写 LaTeX 会明确失败并提示 `--renderer local`**，不会写成「制作成功」。含未登记图件的草稿（如 `examples/invention-example.md`）请显式加 `--renderer local` 生成带占位句的审阅稿。
+适配层只做三件事：把稿件投影成上游认识的 Markdown 文书、调用上游 `convert_md_to_docx`、在边界套用本项目 A4 / 黑色标题与正文 / 宋体 / 1.25 倍行距（判据见 [CNIPA 规则](skills/oh-my-patent/references/cnipa-2026.md#版面硬规则)）/ 2 字符首行缩进。有效公式生成原生 OMML；**缺图、公式回退为原文、普通括号误写 LaTeX 会明确失败并提示 `--renderer local`**，不会写成「制作成功」。含未登记图件的草稿（如 `examples/invention-example.md`）请显式加 `--renderer local` 生成带占位句的审阅稿。
 
 `handoff` 与 `build` 使用同一个 `--renderer` 选择（默认 `auto`），并在交接包 `manifest.json` 的 `renderer` 字段记录实际使用的制作器；如需旧版面仍可显式 `--renderer local`。
 

@@ -44,6 +44,7 @@ jobs:
       - run: python -m pip check
       - run: python tools/check_word_skills.py
       - run: python tools/check_skills.py
+      - run: python tools/check_rule_sources.py
       - name: Run complete deterministic regression without skips
         run: python tools/check_full_dependencies.py
       - name: Record resolved dependency versions
