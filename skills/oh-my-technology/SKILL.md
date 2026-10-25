@@ -1,5 +1,6 @@
 ---
 name: oh-my-technology
+depends_on: [word-document]
 description: 依据可核查的项目材料撰写和审阅技术报告、设计说明、需求规格、接口说明、测试报告、用户手册和运维手册，生成可编辑 Word/PDF 并核对交付质量；专利、项目申报及软著由各自业务技能处理。
 ---
 

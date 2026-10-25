@@ -68,3 +68,38 @@ task_outcome 与 execution_state 分开；进程结束不代表案卷完成。ta
 开发与发布目录的身份、用途和核对命令见 [工作区管理](workspace-management.md)。当前工作副本中未提交的修改必须在发布前逐项审阅，不能把远端提交身份当成本地修改的身份。
 
 本地代码快照位于 `.agent/current-code-manifest.json`，不纳入公开发布。改完所列文件后运行 `python tools/check_code_manifest.py --refresh`，新增文件用 `--include <相对路径>`；交接前再运行无参数校验。完整依赖验收运行 `python tools/check_full_dependencies.py`，其 JSON 报告记录解释器、依赖版本、测试数与 skip 数，任何 skip 均使验收失败。报告保存在 `outputs/acceptance/`，不与发布检出混用。
+
+## 跨 skill 依赖声明
+
+六个业务 skill 共用 `word-document` 的排版能力和 `word_skills` 的转换实现。依赖原先只藏在正文链接里，
+改共享文档时不知道影响谁。2026-10-25 起在 `SKILL.md` frontmatter 里显式声明：
+
+```yaml
+---
+name: oh-my-patent
+depends_on: [word-document]     # 硬依赖：必须存在、不能成环
+see_also: [oh-my-technology]    # 软引用：允许互相引用，不参与成环判断
+---
+```
+
+检查命令：
+
+```bash
+python tools/check_skill_deps.py              # 存在性、成环、未声明链接
+python tools/check_skill_deps.py --reverse    # 反向影响面：改某 skill 会影响谁
+python tools/check_skill_deps.py --strict     # 未声明链接也算失败
+```
+
+规则：**硬依赖必须无环**；互相引用（例如 `word-document` 引用 `oh-my-technology` 的审阅流程，
+同时被它依赖）写 `see_also`。正文链接到别的 skill 却没在两者之一声明，会给警告——
+这通常意味着依赖关系只在某段文字里“事实上存在”，改共享文档时容易漏。
+
+## 行尾必须是 LF（Windows 编辑注意）
+
+`.gitattributes` 声明 `* text=auto eol=lf`，但 Windows 上 `Path.write_text()` 会按 `os.linesep`
+把 `\n` 写成 CRLF。评测夹具（`evals/public_runner`）一边按文本读 Skill、一边按字节算哈希，
+CRLF 会让 frozen Skill 哈希对不上，表现为「只加了一行 frontmatter 却整组评测失败」。
+
+写文件用 `Path.write_bytes(text.encode("utf-8"))`，或 `open(..., newline="\n")`。
+检查：`python tools/check_line_endings.py`（只查 `skills/`、`registry/`、`shared/`、
+`word_skills/schemas/`，已进 `check.py --all`）。

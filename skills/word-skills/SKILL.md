@@ -1,5 +1,6 @@
 ---
 name: word-skills
+depends_on: [word-document, oh-my-patent, oh-my-copyright, oh-my-proposal, oh-my-technology]
 description: 根据用户目标选择技术文档、专利、项目申报、软件著作权或 Word 制作能力，并在多份文档任务中组合共享的来源、事实和交付链路；业务状态以注册表和验证证据为准。
 ---
 

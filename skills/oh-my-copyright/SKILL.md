@@ -1,5 +1,6 @@
 ---
 name: oh-my-copyright
+depends_on: [word-document]
 description: 复用 Fokkyp 流程，从真实软件项目生成中文软著材料，完成业务理解、源码选择、申请字段、图文操作手册和 Word 交付。适用于软著材料生成与复核；权属和真实申请字段由用户确认。
 ---
 

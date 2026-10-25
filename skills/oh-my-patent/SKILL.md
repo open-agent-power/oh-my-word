@@ -1,5 +1,6 @@
 ---
 name: oh-my-patent
+depends_on: [word-document]
 description: 中国专利申请的通用总览与编排入口。识别申请类型、技术领域和案件阶段，按需组合领域子 Skill，基于技术材料完成交底、检索、起草、证据审查、Word 审阅稿及官方 XML 转换交接；用于发明、实用新型与外观设计，不代表自动提交或授权保证。
 ---
 

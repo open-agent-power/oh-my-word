@@ -36,6 +36,8 @@ GROUPS: dict[str, list[tuple[str, list[str]]]] = {
     ],
     "rules": [("check_rule_sources.py", [])],
     "dup": [("check_skill_duplication.py", [])],
+    "skill-deps": [("check_skill_deps.py", [])],
+    "eol": [("check_line_endings.py", [])],
 }
 
 # 需要本机上下文或产物参数的检查：必须显式 --group 调用，--all 不会带上，

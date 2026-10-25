@@ -74,9 +74,10 @@
 但都依赖 `word-document` 的知识与 `word_skills` 的转换能力；`check_skills` 只校验结构，
 不校验“是否重复了同一份规则”。
 
-**已落地一半**：新增 `tools/check_skill_duplication.py`（`check.py --group dup`，进 `--all`），
-扫描跨 skill 的重复段落，默认只告警、`--strict` 才阻断；当前仓库无重复。
-「每个 skill 声明依赖」仍是建议，未实现。
+**已落地**：①`tools/check_skill_duplication.py`（`--group dup`，进 `--all`）扫描跨 skill
+重复段落，默认只告警；②`SKILL.md` frontmatter 增加 `depends_on`（硬依赖，必须无环）与
+`see_also`（软引用），`tools/check_skill_deps.py`（`--group skill-deps`）校验存在性、成环与
+“链接了却没声明”，`--reverse` 输出改动的反向影响面；两处均已进 `--all`。
 
 ## 三、本轮动到的文件
 

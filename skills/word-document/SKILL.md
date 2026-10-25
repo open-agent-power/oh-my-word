@@ -1,5 +1,6 @@
 ---
 name: word-document
+see_also: [oh-my-technology]
 description: 将已组织好的专业文档内容制作成 Word，导入基本参考样式或显式 docxtpl 插槽模板，生成 PDF 预览并检查结构、版面和交付清单。用于 Word 排版、模板适配和文件质量验证；不代替业务写作、事实判断或专利专用格式规则。
 ---
 
