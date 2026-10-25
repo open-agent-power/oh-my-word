@@ -71,6 +71,16 @@ HKCU\Software\Microsoft\VSTO\Security\Inclusion\{GUID}
 - 附图 PNG 会被自动转成 JPG，图片保持 inline。
 - 标记是私用区字符（U+E000–U+F8FF），转换后从 XML 里剥掉；做正文保真比对前要先剥。
 
+### 3.1 自动点按钮（实验性，可选）
+
+官方编辑器没有命令行，`python tools/patent.py convert <单书.docx> --validate` 用 UI Automation
+替人点「一键添加标记 → 单书XML转换」，产物仍是官方工具生成，并可用官方 DTD 校验。
+
+- 只在 Windows + Word 2013+ / WPS 专业版、插件已加载时可用；先 `patent.py env --com`。
+- 依赖 `pip install -e ".[windows]"`（pywin32、comtypes）。
+- 属于**辅助手段**：界面语言、菜单折叠、弹窗都可能让它失败，失败信息会说明卡在哪一步；
+  交付前仍以官方工具里人工预览 + 系统预览为准。
+
 ## 4. 图号必须是正文文字，不能画在图片里
 
 官方《文件格式建议》：图号以文字形式放在图片外。图号画进 PNG 时，工具找不到图号标记，

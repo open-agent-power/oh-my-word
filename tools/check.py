@@ -35,6 +35,7 @@ GROUPS: dict[str, list[tuple[str, list[str]]]] = {
         ("check_word_skills.py", []),
     ],
     "rules": [("check_rule_sources.py", [])],
+    "dup": [("check_skill_duplication.py", [])],
 }
 
 # 需要本机上下文或产物参数的检查：必须显式 --group 调用，--all 不会带上，
@@ -58,6 +59,8 @@ def _load(filename: str):
     spec = importlib.util.spec_from_file_location(module_name, path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
+    # dataclasses / pickling 需要模块已注册到 sys.modules
+    sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
 

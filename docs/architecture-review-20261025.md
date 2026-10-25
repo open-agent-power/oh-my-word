@@ -55,9 +55,10 @@
 - `skills/oh-my-patent/references/cnipa-official-tool.md`：整条链与故障速查；
 - `SKILL.md` 工具链路第 7 步改为“先 `env` 再转换”。
 
-**仍断在**：Word 里点「一键添加标记 → 单书XML转换」。这一段是 VSTO 加载项，
-没有公开命令行；UIA 点击可变但脆弱（本轮实验脚本 `ribbon_click.py` 就是这么干的）。
-是否做成 `--auto` 实验路径，建议等官方提供 CLI 或接口，避免把 UI 自动化写进正式交付链。
+**自动化已补**：`oh_my_patent/cnipa_convert.py` + `patent.py convert`，用 UI Automation 点
+「一键添加标记 → 单书XML转换」并可选跑官方 DTD 校验；实机跑通（100001 自动出 XML）。
+它被标注为**实验性辅助**：界面差异、弹窗、语言都可能让它失败，失败会指出卡在哪步；
+正式交付仍以官方工具人工预览 + 系统预览为准。
 
 ### 4. 根目录被构建产物污染
 
@@ -67,14 +68,15 @@
 
 **建议**：构建/临时产物统一到 `.cache/` 或 `%TEMP%`；根目录只留源码、文档、配置。
 
-### 5. 六个 skill 的复用边界不清
+### 5. 六个 skill 的复用边界不清（**2026-10-25 已加检查**）
 
 `oh-my-copyright` / `oh-my-proposal` / `oh-my-technology` 各自有 `agents/` 和 `references/`，
 但都依赖 `word-document` 的知识与 `word_skills` 的转换能力；`check_skills` 只校验结构，
 不校验“是否重复了同一份规则”。
 
-**建议**：`check_skills` 增加两条规则：①同一段规则文本不得在两个 skill 里复制（命中即提示改成链接）；
-②每个 skill 必须声明它依赖的共享 skill 与共享文档。
+**已落地一半**：新增 `tools/check_skill_duplication.py`（`check.py --group dup`，进 `--all`），
+扫描跨 skill 的重复段落，默认只告警、`--strict` 才阻断；当前仓库无重复。
+「每个 skill 声明依赖」仍是建议，未实现。
 
 ## 三、本轮动到的文件
 

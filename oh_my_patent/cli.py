@@ -231,6 +231,22 @@ def build_parser() -> argparse.ArgumentParser:
     p_env.add_argument("--com", action="store_true", help="启动 Word 实际验证插件是否 Connect（较慢）")
     p_env.add_argument("--fix-trust", action="store_true", help="写当前用户的 VSTO 信任项")
 
+    # ---- convert ----
+    p_cv = sub.add_parser(
+        "convert",
+        help="在 Word 里自动跑官方工具：一键添加标记 → 单书XML转换（实验性）",
+        description=(
+            "官方编辑器是 VSTO 加载项，没有命令行；这里用 UI Automation 点 ribbon。"
+            "只支持 Windows + Word 2013+ 或 WPS 专业版，且插件已加载（先跑 env --com）。"
+            "失败会说明卡在哪一步，不会假装成功。"
+        ),
+    )
+    p_cv.add_argument("docx", help="单个文书的 .docx（文件名以 100001 等开头最好）")
+    p_cv.add_argument("--timeout", type=float, default=180.0, help="等待 XML 生成的秒数")
+    p_cv.add_argument("--keep", action="store_true", help="结束后不关闭 Word（排查用）")
+    p_cv.add_argument("--validate", action="store_true", help="转换后用官方 DTD 校验")
+    p_cv.add_argument("--json", action="store_true", help="输出 JSON")
+
     # ---- ingest ----
     p_ing = sub.add_parser(
         "ingest",
@@ -871,6 +887,19 @@ def cmd_ingest(args: argparse.Namespace) -> int:
 # 入口
 # --------------------------------------------------------------------------
 
+def cmd_convert(args):
+    from . import cnipa_convert
+
+    argv = [str(args.docx), "--timeout", str(args.timeout)]
+    if getattr(args, "keep", False):
+        argv.append("--keep")
+    if getattr(args, "validate", False):
+        argv.append("--validate")
+    if getattr(args, "json", False):
+        argv.append("--json")
+    return cnipa_convert.main(argv)
+
+
 def cmd_env(args):
     from . import cnipa_env
 
@@ -886,6 +915,7 @@ def cmd_env(args):
 
 _COMMANDS = {
     "env": cmd_env,
+    "convert": cmd_convert,
     "build": cmd_build,
     "review-init": cmd_review_init,
     "handoff": cmd_handoff,

@@ -139,6 +139,7 @@ python tools/patent.py lint outputs/draft.md
 python tools/patent.py build outputs/draft.md -o outputs/review.docx --strict
 python tools/patent.py env                     # 官方 XML 工具与宿主是否就绪
 python tools/patent.py env --com               # 再启动 Word 实测插件加载
+python tools/patent.py convert 100001-权利要求书.docx --validate   # 自动点按钮转换（实验性）
 python -m word_skills patent template invention -o outputs/draft.md
 ```
 

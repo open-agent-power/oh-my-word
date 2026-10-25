@@ -19,6 +19,9 @@ def _load():
     spec = importlib.util.spec_from_file_location("check_runner", ROOT / "tools/check.py")
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
+    import sys
+
+    sys.modules["check_runner"] = module
     spec.loader.exec_module(module)
     return module
 

@@ -39,6 +39,14 @@ ingest = [
     "python-pptx>=1.0",   # .pptx 按页抽取
 ]
 
+# 只在 Windows 上自动跑官方「WORD 转 XML 编辑器」时用到（`patent.py convert`）。
+# 官方插件是 VSTO 加载项，靠 UI Automation 点按钮，所以需要 pywin32 + comtypes。
+# 装上：pip install -e ".[windows]"
+windows = [
+    "pywin32>=306",
+    "comtypes>=1.4",
+]
+
 templates = [
     "docxtpl>=0.20.2,<0.21",
 ]
