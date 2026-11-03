@@ -55,7 +55,7 @@ Windows 评测进程默认继承已启用的系统代理；显式 HTTP_PROXY/HTT
 
 模型能回复后，还要确认过程中的文件读取成功。若命令返回 `helper_unknown_error: setup refresh had errors`，查看 `.codex/.sandbox` 最新日志，核对运行时文件占用和权限；按 [官方 Windows 沙箱排障](https://learn.chatgpt.com/docs/windows/windows-sandbox) 处理。进程 succeeded 与材料读取/任务完成分开，缺口回复保留未完成状态；原始日志留在私有运行目录。
 
-已有15例是缺完整材料的合成路由/事实边界短例。执行器只读，最终回复保存 response.md，适合文本/路由/缺口比较；二进制交付、官方转换与实际申请另验证。这里显式加载入口，不测宿主自动发现。任务包分离和提示词不是 OS 文件隔离；高保密评测须用具备文件/网络边界的宿主。其他宿主可读取 task.json，本轮内建执行器只适配 Codex CLI。
+已有20例是缺完整材料的合成路由/事实边界短例，其中 `xml-*` 的5例覆盖转换工作流复盘形成的决策边界。执行器只读，最终回复保存 response.md，适合文本/路由/缺口比较；这些案例不验证真实 Word 加载、信任修复、弹窗操作、二进制保真或系统提交。这里显式加载入口，不测宿主自动发现。任务包分离和提示词不是 OS 文件隔离；高保密评测须用具备文件/网络边界的宿主。其他宿主可读取 task.json，本轮内建执行器只适配 Codex CLI。
 
 真实案卷的 cases YAML 放在私有目录，用 manifest 字段指向相对 case.json，request 写任务，expected 为 required/avoid/behavior。执行器只复制 input/reference；answer 与 expected 留在 suite.json 评分侧。完整任务包同时检查本任务隐藏答案及跨组 input/answer 的哈希，防止它们经共享参考文件混入。角色随任务确定，同组另一任务合法输入不一概禁用。已见测试样本转开发；不同版本各自冻结完整包，固定模型、工具和预算。检索增益另设资料条件，本工具没有实时RAG服务。
 

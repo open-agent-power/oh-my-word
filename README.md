@@ -159,9 +159,9 @@ oh-my-patent build 稿件.md -o 申请文件/ --split               # 每个部�
 
 `handoff` 与 `build` 使用同一个 `--renderer` 选择（默认 `auto`），并在交接包 `manifest.json` 的 `renderer` 字段记录实际使用的制作器；如需旧版面仍可显式 `--renderer local`。
 
-官方 XML 转换已实机验证（2026-10-25）：Windows 11 + Microsoft 365 + 官方 WORD 转 XML 编辑器 V4.3，交接包拆出的四书分别转成 `100001`~`100004` XML 并全部通过官方 `cn-application-body-20080416.dtd`；权利要求 17/17 项、摘要 258 字逐字一致。安装与插件加载有两个坑：MSI 启动条件要求传 `SETUPEXEDIR`（直装报「只能从 bootstrapper 运行」），且发行方清单证书 2026-07-14 到期、无时间戳，全新安装默认不信任，需要当前用户级 VSTO 信任项。检测用 `python tools/patent.py env`，安装/修复用 `python tools/cnipa_install.py`，完整步骤与故障速查见 [官方工具安装与转换](skills/oh-my-patent/references/cnipa-official-tool.md)。
+官方 XML 转换已有实机记录（2026-10-25、2026-11-02）：Windows 11 + Microsoft 365 + 官方 WORD 转 XML 编辑器 V4.3，四类单书分别生成 `100001`~`100004` XML 并通过本地官方 DTD 校验。经验不能直接推广到其他版本：签名有效期须从实际清单读取，静态 ready/信任项存在不代表 Word 可加载；`env --com` 会尝试连接插件，安装脚本还会清理共享目录及写信任项。先取宿主、依赖和资源证据；信任例外单独说明风险并确认，不能自动放宽安全策略。步骤和当前 CLI 未修复限制见 [官方工具安装与转换](skills/oh-my-patent/references/cnipa-official-tool.md)。
 
-交接说明已按官方手册提示：`摘要附图` 文书仅供审阅，转换前删除（系统改为在请求书里指定图号）。转换必须**逐份单书**做「一键添加标记 → 单书XML转换」；把五书合进一个单节文档时工具会把整篇当成权利要求书。
+已验证路径在工作副本中逐份执行「一键添加标记 → 单书XML转换」；单节合订本曾被误识别为权利要求书。摘要图保留供审阅，不编造第五种 XML 编码；当前系统指定方式仍需核实。仅转换不补填内容审查 pass，打包只含官方 XML 及引用图片；本地保真/预览、系统预览和提交分别验收，见 [XML 交接](skills/oh-my-patent/references/cnipa-xml-handoff.md)。
 
 限制：外观设计不走该路径；`latex2mathml`、`docxcompose` 为运行依赖；WPS 12.1 与 Word 365 均已完成打开/导出/编辑往返；官方 XML 转换已验证，**正式提交仍未验证**（需申请人账号、请求书与电子签名）。固定原件、边界差异与验证范围见 [复用决策](docs/upstream-reuse.md)。
 

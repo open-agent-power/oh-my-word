@@ -1,131 +1,109 @@
-# 官方 WORD 转 XML 编辑器：安装、转换、提交
+# 官方 WORD 转 XML 编辑器：环境诊断与转换
 
-2026 年起电子申请只收 XML。这份文档只写**实机验证过**的步骤与故障处置，
-依据是本项目 2026-10-25 在 Windows 11 + Microsoft 365 + 官方 V4.3 上跑通的一次完整转换
-（四书 XML 全部通过官方 DTD）。
+用于发明/实用新型的官方转换路径；交付状态、预览与打包见 [XML 交接](cnipa-xml-handoff.md)。安装来源及输入要求以当前官方页面和手册为准，不从目录名、历史记录推断「最新版」。无法可靠查询时只报告已安装版本。
 
-## 0. 先检测，再动手
+本指引综合两次 Windows 11 + Microsoft 365 + 官方 V4.3 的实机记录（2026-10-25、2026-11-02）。后一次恢复了既有插件加载并生成四类 XML，但没有完成系统提交。以下区分观察、处置规则和尚未修复的代码限制，不承诺所有 Office/WPS 版本兼容。
+
+## 1. 先诊断，区分命令的副作用
 
 ```bash
-python tools/patent.py env          # 人读：缺什么、下一步做什么
-python tools/patent.py env --json   # 脚本判断用
-python tools/patent.py env --com    # 真的启动 Word，确认插件 Connect（较慢）
-python tools/patent.py env --fix-trust   # 当前用户级补信任项，不需要管理员
+python tools/patent.py env
+python tools/patent.py env --json
 ```
 
-退出码：`0` 就绪 / `2` 降级（能用但有坑）/ `1` 未就绪 / `3` 非 Windows。
+这两个命令收集静态线索，不证明 Word 真能加载。当前退出码为 `0` 就绪 / `2` 降级 / `1` 未就绪 / `3` 非 Windows；不得把静态 ready、安装器返回 0 或注册表条目存在当成实际转换验收。
 
-检测项与故障的对应关系：
-
-| 检查 | 不通过时的真实症状 |
+| 命令 | 当前实现的副作用与使用边界 |
 | --- | --- |
-| 宿主（Word 2013+ 或 WPS 专业版 2015+） | 装完 Word 里没有「专利处理」；个人版 WPS 不加载 VSTO |
-| 插件安装 | 无菜单、ARP 里没有「WORD转XML编辑器」 |
-| 插件注册 | `HKCU\Software\Microsoft\Office\Word\Addins\CNIPR.PatentTool` 缺失或 `LoadBehavior≠3` |
-| 清单签名 / VSTO 信任 | 事件日志 VSTO 4.0 报「签名清单或证书未知，自定义项不在信任列表中」 |
-| DTD/XSL 资源 | 预览报「拒绝访问 …/dtdandxsl/cn-application-body-20080416.dtd」 |
+| `env --com` | 新建 Word 实例；插件未连接时尝试 `Connect=True`，最后退出该实例。不是纯只读检查，先说明会尝试加载现有插件；不代替对信任例外的授权 |
+| `env --fix-trust` | 写当前用户 VSTO Inclusion 项，属于定向信任例外；不是一般诊断命令，不默认执行 |
+| `cnipa_install.py --verify-only` | 不安装，但内部调用 COM 探测，具有与 `env --com` 相同的加载尝试 |
+| `cnipa_install.py --package …` | 当前会提权、清理既有共享数据目录、运行 MSI 并写信任项；不是无损修复，不作为「缺什么就自动装什么」的默认步骤 |
 
-## 1. 安装：必须管理员，且 MSI 要传 SETUPEXEDIR
+静态输出中的修复建议也要经过下述风险判断。要求纯只读时，不运行以上 COM/安装/信任写入路径。
 
-```bash
-python tools/cnipa_install.py --package <word转xml-安装包-*.zip 或解包目录>
-python tools/cnipa_install.py --verify-only
-```
+## 2. 就绪证据：看实际宿主，而不只看 shell
 
-脚本会做四件事：解包 → 清掉失败半装残留 → `msiexec /i ... SETUPEXEDIR=<目录> ALLUSERS=1 /qn`
-→ 写 VSTO 信任项并复检。需要管理员时它会自己请求一次 UAC。
+转换前记录宿主版本/位数、插件产品和文件版本、实际安装目录、清单路径及哈希，并核对：
 
-手装时记住两个坑：
+| 层次 | 需要的证据 |
+| --- | --- |
+| 安装与注册 | 官方来源、实际 COM 加载项标识、Manifest 指向存在的 `.vsto`；注册值只是线索 |
+| 签名与信任 | 从本机清单/证书读取发行方、有效期、时间戳及适用信任项，记录未知或失败；不能硬编码一个到期日适用于所有安装包 |
+| 依赖 | 按部署/应用清单核对依赖文件是否齐全及预期哈希，不能仅检查目录存在 |
+| DTD/XSL | 实际 DTD、XSL 及其引用资源可读；空的 `dtdandxsl` 目录不算就绪 |
+| 宿主加载 | Word 实际 `COMAddIns` 的标识和连接状态、事件日志，以及目标文档窗口中的「专利处理」菜单；仍需一次本案工作副本转换验收 |
 
-1. **启动条件**：MSI 的 LaunchCondition 是 `SETUPEXEDIR OR (REMOVE="ALL")`，
-   直接 `msiexec /i` 会报「This package can only be run from a bootstrapper」。传 `SETUPEXEDIR` 即可。
-2. **共享数据目录**：安装要写 `C:\ProgramData\PatentTool`（Users 只读）。
-   非管理员跑到一半 1603 回滚，还会留下 1.4 万个只读文件；
-   下次安装必须在管理员下 `rd /s /q` 清干净，否则同一批文件报 1310/1603。
+2026-11-02 观察到命令进程读到的新 Manifest/信任值与 Word 读到的旧值不同。实际加载标识为 `CNIPR.PatentTool`，安装清单中的 `keyName=PatentTool` 不能单独证明宿主加载标识。
 
-## 2. 插件信任：发行方证书已过期，必须补信任项
+若静态检查与宿主不一致，先在同一用户、同一 Word 实例核对 `COMAddIns`、Word 可见的 Manifest/Inclusion（可用 Word 的 `System.PrivateProfileString` 读取）和 VSTO 日志。记录双方读值及读取方式，不把「32/64 位重定向」等未证实解释写成根因，也不反复向 shell 视图补键。针对同一假设两次处置仍无新证据时，改变诊断路径。
 
-`PatentTool.vsto` 的 ClickOnce 清单签名证书 **2026-07-14 到期，且没有时间戳**，
-所以 2026-07-14 之后的全新安装默认不加载插件。这是发行方打包缺陷，不是本机问题。
+实际连接、菜单与转换已成功时，静态 `LoadBehavior` 的异常仍应记录，但不能只为凑成 `3` 继续盲改。若宿主证据仍不足，状态保持未验证；本指引未修改 `cnipa_env.py` 的 ready 判断。
 
-当前用户级解法（不需要管理员）：
+## 3. 修复：优先官方包，信任例外单独决策
 
-```
-HKCU\Software\Microsoft\VSTO\Security\Inclusion\{GUID}
-    Url       = file:///C:/Users/<user>/AppData/Local/CNIPR/PatentTool_<ver>/PatentTool.vsto
-    PublicKey = 清单 Signature/KeyInfo/KeyValue/RSAKeyValue 里的 <RSAKeyValue>…</RSAKeyValue>
+先核对可验证的官方更新/重装包和签名；网页不可访问、下载受阻或证书异常时保留缺口，不绕过浏览器安全警告、HTTPS 校验或自动接受协议。
+
+本项目既有 MSI 的启动条件要求 `SETUPEXEDIR`，相关版本直接 `msiexec /i` 可能报「只能从 bootstrapper 运行」。这是特定安装包经验，其他版本按其手册处理。1603/1310 应先查 MSI 日志、权限和冲突，不一律归因为残留。
+
+在执行安装、清理或补文件前：
+
+1. 明确获准目标、影响范围和回滚方法；备份实际生效的配置和受影响文件。共享目录可能仍含有效资源，优先官方修复/卸载，不按故障表直接递归删除。
+2. 记录安装前后差异，按实际宿主读回；不要改其他加载项或清除全部 VSTO 信任项。
+3. 若确需补依赖，只补已确认缺失且版本/架构/清单哈希匹配的文件；先验证来源及原清单可信性。不能搜索同名 DLL 下载「最新版」，不能改签名清单让错误文件通过。哈希匹配不等于发行方真实性认证。
+
+后一次实机发现缺少 `netstandard.dll`、`System.Buffers.dll`、`System.Memory.dll`、`System.Numerics.Vectors.dll`、`System.Runtime.CompilerServices.Unsafe.dll`、`System.Threading.Tasks.Extensions.dll`。从 Microsoft NuGet 包恢复的文件逐一匹配未改动清单的 SHA256，仅补缺失项；这不是所有安装都缺这些文件的规则。
+
+### 定向信任例外
+
+证书有效性、信任例外和插件能否运行是不同事实。现有安装的证书已过期时，Inclusion 可能恢复加载，但**不会使证书重新有效**。一般「帮我修复」不自动授权弱化安全策略；说明具体插件、来源、风险、拟写项和回滚范围，得到针对性确认后再做。
+
+已确认需使用这一例外时，当前工具的写入形态为：
+
+```text
+HKCU\Software\Microsoft\VSTO\Security\Inclusion\{plugin-specific-guid}
+    Url       = 当前已核验 PatentTool.vsto 的绝对 file URI
+    PublicKey = 该清单 KeyInfo/KeyValue 中的 RSAKeyValue XML
     Name      = PatentTool
 ```
 
-两个**必须**：`Url` 指到 `.vsto` 文件（指目录无效）；`PublicKey` 用清单 KeyInfo 的 RSAKeyValue
-（用证书公钥无效）。`python tools/patent.py env --fix-trust` 就是干这件事。
+`Url` 指到文件而非目录；`PublicKey` 使用清单的 `RSAKeyValue`，不能任意替换成证书公钥格式。若同一键已有值，先备份，不静默覆盖。必要的 Manifest 修正也只针对已确认加载项及实际宿主可见视图。保存前值、改动值和宿主读回；失败时只恢复本次改动或移除本次新增项。
 
-## 3. 转换：先标记，再逐份「单书」
+不得通过修改系统证书库、全局宏/Office 信任策略、杀毒或 HTTPS 策略来默认放行插件。当前 `--fix-trust` 不承担授权、备份和完整回滚；Agent 必须在调用前处理这些边界，不能把文档约束说成代码已经强制执行。
 
-官方流程是「一键添加标记」→「单书XML转换」，产物落在 docx 同级的 `100001`~`100004` 目录
-（XML + 附图 JPG），工具还会自动打一个同名 zip。
+## 4. 逐份单书转换：只在副本上操作
 
-- **一次只放一本书**。实测把五书合进一个单节文档时，「五书XML转换」会把整篇当权利要求书，
-  说明书/附图/摘要全塞进 claims。单节合订本点「制作压缩包」只得到 22 字节空包。
-- **摘要附图不再单独收**：官方系统改为在请求书里指定图号，不要转 `摘要附图`。
-- 附图 PNG 会被自动转成 JPG，图片保持 inline。
-- 标记是私用区字符（U+E000–U+F8FF），转换后从 XML 里剥掉；做正文保真比对前要先剥。
+保留原稿哈希、清洁单书源稿和本次转换工作副本。官方「添加标记」可能主动保存 DOCX 并产生 `bak*.docx`；仅靠关闭时 `SaveChanges=0` 不能保护原稿。
 
-### 3.1 自动点按钮（实验性，可选）
+1. 核对本次范围及实际文书，逐份准备权利要求书 `100001`、说明书 `100002`、说明书附图 `100003`、说明书摘要 `100004`；缺图的案件按实际材料处理，不凑文件。摘要附图单独保留供审阅，系统指定方式见 [XML 交接](cnipa-xml-handoff.md#摘要附图指定方式待核实)。
+2. 每次尝试使用新的工作目录，记录输入哈希、开始时间、插件版本和预期产物；保留失败尝试，不覆盖或误收旧 XML。
+3. 将 UI 操作绑定到自己打开的文档：核对 `Document.FullName`，从该实例的 `ActiveWindow.Hwnd` 定位窗口，不能取枚举到的第一个 Word 窗口或假定存在 `Word.Application.Hwnd`。
+4. 在该窗口执行「一键添加标记」→「单书XML转换」，每步检查模态框及状态。已识别的标记完成、转换工具说明/是否继续、生成完成提示逐个处理；按窗口归属、标题和正文识别，不能仅因出现「确定」就判断错误或自动同意。
+5. 未知弹窗、安全提示、协议、签署或提交请求停下交给用户。转换授权不包含「一键提交」。
+6. 按本次目录、时间及 XML 实际内容确认产物稳定、可解析，再做 DTD 与保真核验。超时或 COM 关闭异常不等于转换失败：先看本次新产物和未处理模态框，再决定是否重试。
+7. 处理完对话框后只关闭自己创建的文档/实例。不结束所有 `WINWORD` 进程，也不为清理顺手关闭用户文档。
 
-官方编辑器没有命令行，`python tools/patent.py convert <单书.docx> --validate` 用 UI Automation
-替人点「一键添加标记 → 单书XML转换」，产物仍是官方工具生成，并可用官方 DTD 校验。
+一次只放一本书是该路径的已验证做法。历史测试中，单节合订本被错误识别为权利要求书，且工具可产生空 ZIP；不能把「点击成功」或 ZIP 存在作为完成依据。其他五书模板路径按当前官方手册独立验证。
 
-- 只在 Windows + Word 2013+ / WPS 专业版、插件已加载时可用；先 `patent.py env --com`。
-- 依赖 `pip install -e ".[windows]"`（pywin32、comtypes）。
-- 属于**辅助手段**：界面语言、菜单折叠、弹窗都可能让它失败，失败信息会说明卡在哪一步；
-  交付前仍以官方工具里人工预览 + 系统预览为准。
+### 现有 CLI 的使用限制
 
-## 4. 图号必须是正文文字，不能画在图片里
+```bash
+python tools/patent.py convert <工作副本中的单书.docx> --validate
+```
 
-官方《文件格式建议》：图号以文字形式放在图片外。图号画进 PNG 时，工具找不到图号标记，
-直接弹「请先添加标记」，转换中止。
+此命令依赖 Windows、可加载的 Word 官方插件及 `.[windows]` 依赖，仅为实验辅助。**当前实现尚未满足上述全部约束**：它枚举第一个 Word 窗口、使用按钮名称子串和固定等待，模态框处理有限；异常日志可能与随后实际生成 XML 并存。不能在存在其他 Word 窗口或不明弹窗时无人值守运行；可改用自己绑定窗口的受控操作或人工转换。
 
-修法（本项目对真实案卷做过）：擦掉图片内的「图N」像素 → 在图后插入正文「图N」段落。
-插入段落时字体的 `w:ascii`/`w:hAnsi`/`w:eastAsia` **三处都要写宋体**，只写 `font.name`
-（西文）会让中文回落到主题字体，标题看起来“字体乱了”。
+当前 `code_from_xml()` 只识别 `<cn-description>`，而本次官方说明书实际为 `<description>`；文件名前缀回退会掩盖识别缺口。文件名可辅助定位，不能代替 XML 文书类型与正文核对。本次仅更新技能/文档，未修复转换器代码，也未证明 WPS 自动点击兼容。
 
-## 5. 转换后必查（脚本可做）
+## 5. 图号与资源故障
 
-| 检查 | 做法 | 本次实测值 |
-| --- | --- | --- |
-| DTD | `lxml.etree.DTD(官方 cn-application-body-20080416.dtd).validate()` | 四书全过 |
-| 正文保真 | 剥标记后与源 docx 逐字比对 | 权要 17/17、说明书 7,772 字、摘要 258 字一致 |
-| 摘要字数 | 汉字数 ≤ 300 | 239 |
-| 权项引用 | 每项引用的编号必须小于自身编号 | 12 项无倒挂 |
-| 段号残留 | 正文里不应有 `[0001]` 这类段号 | 0 处 |
-| 附图 | `figure num=0001…`、`img inline=yes` | 3 幅 |
+- 图号使用图片外正文「图N」，不要只画进图片。需要移除图片内重复图号时，在副本上确认不损伤技术内容并视觉复核，不能默认擦除任意文字。写宋体时核对 `w:ascii`、`w:hAnsi`、`w:eastAsia`，只写西文字体可能导致中文回退。
+- 提示「请先添加标记」时，核对实际提示正文、文书拆分、图号及标记步骤，不能从任意「确定」按钮推断此原因。
+- DTD/XSL 缺失时核对实际文件与引用；某次安装的完整资源在 `dtdandxsl.zip`，而共享目录只有空壳。当前转换器支持从安装包归档回退查找，仍需记录实际使用资源及其哈希。
+- `cn-drawings` 内容模型可能产生 `DTD_CONTENT_NOT_DETERMINIST` 诊断。分别记录本次 `validate()` 返回值和全部日志，确认来源；不可屏蔽所有 DTD 错误，也不能把 `valid=True` 写成「没有诊断」或「系统已接收」。
 
-`cn-application-body-20080416.dtd` 对 `cn-drawings` 的建模本身 nondeterministic，
-校验器会给一条 `DTD_CONTENT_NOT_DETERMINIST` 告警；`valid=True` 时它不是文档错误。
+## 6. 复盘形成的回归边界
 
-## 6. 提交（系统里做，脚本到不了）
+这次耗时主要来自先修 shell 可见配置、后看 Word，直到加载后才发现缺依赖，以及将固定等待当成弹窗处理。下次先取实际宿主、清单和资源证据，再做有限、可回滚处置。
 
-依据官方《提交 XML 文件常见问题解答》问题 10：
-
-1. 登录 `cponline.cnipa.gov.cn` → 「国家申请」→ 选发明专利 → 「新申请办理」。
-2. 「上传」整个 XML 压缩包（目录结构 `100001/100001.xml`、`100003/…jpg`），
-   或在页面里逐项导入单书 XML。
-3. 请求书**在系统里逐栏录入**（不上传）；摘要附图在第 24 栏选「图1」。
-4. 点「预览」核对（系统渲染 PDF 才是权威预览），无误后电子签名、提交、缴费。
-5. 保存受理回执、申请号、缴费记录。
-
-本地想看 XML 内容：官方 XSL 用的是站点绝对路径（`/dtdandxsl/showxml.xsl`），
-浏览器直接打开 XML 会白屏；把 `dtdandxsl` 放在旁边并用本地 http 服务打开，
-或预渲染成 HTML 再看。
-
-## 7. 故障速查
-
-| 症状 | 处置 |
-| --- | --- |
-| 安装 1603 / 「只能从 bootstrapper 运行」 | 管理员 + 传 `SETUPEXEDIR` |
-| 1310 写入 `scaleimage.js` 失败 | `C:\ProgramData\PatentTool` 有只读残留，管理员 `rd /s /q` 后重装 |
-| 装完没有「专利处理」 | 先查 VSTO 事件日志的签名错误 → `env --fix-trust` |
-| 「请先添加标记」 | 该文书没加到标记：确认是单书文档、图号是正文文字 |
-| 预览「拒绝访问 …dtdandxsl…」 | 文档同级或上级放 `dtdandxsl`（安装目录的 `dtdandxsl.zip` 解出） |
-| 制作压缩包得到空 zip | 合订本没被识别成五书；改为逐份单书转换后自己打包 |
+技能决策案例见 [路由与边界案例](../../../evals/skill-routing-cases.yaml) 中 `xml-*` 条目；它们是公开合成输入，不含真实案卷。后续若修改运行代码，应另补宿主/信任判断、依赖缺失、原生 `<description>`、多窗口/模态框、超时后产物、原稿保护和打包白名单的针对性回归。纯逻辑测试不能证明 Word 交互成功，文档改动也不证明这些运行限制已修复。
